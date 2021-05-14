@@ -26,7 +26,7 @@ Pod::Spec.new do |spec|
   #   * Finally, don't worry about the indent, CocoaPods strips it!
   spec.description  = "PushPushGo framework description"
 
-  spec.homepage     = https://pushpushgo.com/pl/"
+  spec.homepage     = "https://pushpushgo.com/pl/"
   # spec.screenshots  = "www.example.com/screenshots_1.gif", "www.example.com/screenshots_2.gif"
 
 
