@@ -15,8 +15,9 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         super.init()
     }
 
-    public static func initializeNotifications(projectId: String) {
+    public static func initializeNotifications(projectId: String, apiToken: String) {
         SharedData.shared.projectId = projectId
+        SharedData.shared.apiToken = apiToken
         SharedData.shared.center = UNUserNotificationCenter.current()
     }
 
