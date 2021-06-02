@@ -38,7 +38,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    public static func sendDeviceToken(_ token: Data, handler:@escaping (_ result: ActionResult) -> Void) {
+    public static func sendDeviceToken(_ token: Data, handler: @escaping (_ result: ActionResult) -> Void) {
         let tokenParts = token.map { data in String(format: "%02.2hhx", data) }
         let key = tokenParts.joined()
         let oldKey = SharedData.shared.deviceToken
@@ -54,7 +54,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
-    public static func unsubscribeUser(handler:@escaping (_ result: ActionResult) -> Void) {
+    public static func unsubscribeUser(handler: @escaping (_ result: ActionResult) -> Void) {
         ApiService.shared.unsubscribeUser { result in
             handler(result)
         }
@@ -121,6 +121,10 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 }
             }
         }
+    }
+
+    public static func sendBeacon(_ beacon: Beacon, handler: @escaping (_ result: ActionResult) -> Void) {
+        ApiService.shared.sendBeacon(beacon: beacon, handler: handler)
     }
 
     private static func saveEvent(_ event: Event) {
