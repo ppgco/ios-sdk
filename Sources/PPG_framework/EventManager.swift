@@ -60,38 +60,31 @@ class EventManager {
 
     public func sync(handler: @escaping (_ result: [Event]) -> Void) {
         let validEvents = getEvents().filter { !$0.canDelete() }
-        print("Valid events for syncing: \(validEvents.map { $0.getKey() })")
         let dispatchGroup = DispatchGroup()
 
         validEvents.forEach { event in
             dispatchGroup.enter()
             event.send(sender: self.eventSender) { result in
-                print("Event sent: \(event.getKey()), Result: \(result)")
                 dispatchGroup.leave()
             }
         }
 
         dispatchGroup.notify(queue: .main) {
             self.setEvents(events: validEvents)
-            print("All events have been synced.")
             handler(validEvents)
         }
     }
 
 
     public func register(event: Event, handler: @escaping (_ result: ActionResult) -> Void) {
-        print("Registering event: \(event.getKey())")
         if exists(event: event) {
-            print("Event already exists. Returning error.")
             DispatchQueue.main.async {
                 handler(.error("Event was sent before. Omitting"))
             }
             return
         }
         append(event: event)
-        print("Event appended. Calling sync.")
         sync { result in
-            print("Sync completed for event: \(event.getKey())")
             DispatchQueue.main.async {
                 handler(.success)
             }
@@ -111,9 +104,6 @@ class EventManager {
 
     public func getEvents() -> [Event] {
         if let data = self.sharedData.sharedDefaults?.data(forKey: "SavedPPGEvents") {
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("Data from UserDefaults: \(jsonString)")
-            }
             let decoder = JSONDecoder()
             decoder.dateDecodingStrategy = .custom { decoder -> Date in
                 let container = try decoder.singleValueContainer()
@@ -144,9 +134,6 @@ class EventManager {
         }
         do {
             let data = try encoder.encode(events)
-            if let jsonString = String(data: data, encoding: .utf8) {
-                print("Encoded events: \(jsonString)")
-            }
             self.sharedData.sharedDefaults?.set(data, forKey: "SavedPPGEvents")
         } catch {
             print("Encoding error: \(error)")

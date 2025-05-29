@@ -108,9 +108,7 @@ class Event: Codable, CustomStringConvertible {
     func send(
         sender: EventSender, handler: @escaping (_ result: ActionResult) -> Void
     ) {
-        print("Sending event: \(self.getKey()), wasSent: \(self.wasSent())")
         if self.wasSent() {
-            print("Event was already sent. Returning error.")
             DispatchQueue.main.async {
                 handler(.error("Event was sent before"))
             }
