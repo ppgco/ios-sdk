@@ -147,7 +147,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
     public static func getUrlFromNotificationResponse(
         response: UNNotificationResponse
-    ) -> URL? {
+    ) -> (URL?, Bool) {
         let userInfo = response.notification.request.content.userInfo
         
         // Check for URL in actions array
@@ -161,16 +161,19 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             case "button_2":
                 index = 1
             default:
-                return nil
+                return (nil, false)
             }
             
             guard index < actions.count,
                 let urlString = actions[index]["url"] as? String,
                 urlString.starts(with: "http") || urlString.starts(with: "app"),
                 let url = URL(string: urlString) else {
-                return nil
+                return (nil, false)
             }
-            return url
+            
+            // Check if this action button URL should be treated as a Universal Link
+            let isUniversalLink = actions[index]["UL"] as? Bool ?? false
+            return (url, isUniversalLink)
         }
         
         // Fallback to default url
@@ -179,10 +182,12 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
            let link = urlArgs.first,
            link.starts(with: "http") || link.starts(with: "app"),
            let url = URL(string: link) {
-            return url
+            // Check root level UL flag for default click URL
+            let isUniversalLink = userInfo["UL"] as? Bool ?? false
+            return (url, isUniversalLink)
         }
         
-        return nil
+        return (nil, false)
     }
     
     public static func modifyNotification(
@@ -299,12 +304,32 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
         
         // Handle URL opening if present
-        if let url = PPG.getUrlFromNotificationResponse(response: response) {
-            DispatchQueue.main.async {
-                UIApplication.shared.open(url)
+        let (responseUrl, isUniversalLink) = PPG.getUrlFromNotificationResponse(response: response)
+        
+        if let url = responseUrl {
+            
+            if isUniversalLink {
+                // Handle as Universal Link using NSUserActivity
+                let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+                userActivity.webpageURL = url
+                
+                DispatchQueue.main.async {
+                    // Pass to app delegate
+                    if let appDelegate = UIApplication.shared.delegate,
+                       appDelegate.responds(to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))) {
+                        appDelegate.application?(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
+                    } else {
+                        // Fallback if app delegate can't handle it
+                        UIApplication.shared.open(url)
+                    }
+                }
+            } else {
+                // Open as regular URL in browser
+                DispatchQueue.main.async {
+                    UIApplication.shared.open(url)
+                }
             }
         }
-        
         completionHandler()
     }
 
