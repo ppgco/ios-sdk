@@ -1,7 +1,7 @@
 #  Setup Guide
 
 > [!IMPORTANT]
-> **Version 3.0.1 integration**
+> **Version 3.0.1+ integration**
 >
 > The SDK now provides three simple ways to integrate push notifications:
 > 1. SwiftUI apps without AppDelegate - using `@UIApplicationDelegateAdaptor`
