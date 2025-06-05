@@ -1,21 +1,18 @@
 #  Setup Guide
 
 > [!IMPORTANT]
+> **Version 3.0.3**
+>
+> Welcome back Cocoapods - from this version you can integrate via:
+> SPM
+> Cocoapods
+> 
 > **Version 3.0.1+ integration**
 >
 > The SDK now provides three simple ways to integrate push notifications:
 > 1. SwiftUI apps without AppDelegate - using `@UIApplicationDelegateAdaptor`
 > 2. UIKit apps with inheritance - extend `PPGAppDelegate`
 > 3. UIKit apps with existing AppDelegate - use helper methods
->
-> Key improvements:
-> - Simplified initialization with `PPG.initializeNotifications`
-> - Automatic notification delegate handling
-> - Built-in support for all notification callbacks
->
-> **SPM support**
-> 
-> Version 2.1.0 and above support SPM. Cocoapods is no longer supported from version 2.1.0.
 >
 > **Requirements**
 >
@@ -29,7 +26,24 @@ Tutorial: https://docs.pushpushgo.company/application/providers/mobile-push/apns
 Choose one of options:
 - SPM (recommended)
 - Direct download
-- Cocoapods (deprecated from v2.1.0)
+- Cocoapods (supported again from version 3.0.3)
+
+#### SPM
+1. In Xcode navigate to File -> Add package dependencies...
+2. Search for https://github.com/ppgco/ios-sdk
+3. Add sdk to project target
+4. Also add sdk to NotificationServiceExtension target (more details below)
+
+#### Cocoapods
+In your **Podfile** add to the application target:
+```bash
+    pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '3.0.3'
+```
+Then run
+
+```bash
+    pod install
+```
 
 ### Integration
 
@@ -166,9 +180,11 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 ```
 
 
-### Migration from older versions
+### Migration from Cocoapods to SPM
 
 #### Cocoapods -> SPM
+If you would like to migrate from Cocoapods to SPM, follow these steps:
+
 1. If PPG ios-sdk was the only library installed by Pods, run `pod deintegrate` to remove any Pods-related files. If you are using Pods for any other dependencies, then remove PPG_framework references manually. Also detach it from project and NSE targets.
 2. Add library using SPM. Xcode -> File -> Add Package Dependency. Provide github url and choose your project target.
 3. Manually add library to NotificationServiceExtension target.
@@ -236,6 +252,31 @@ override func didReceive(_ request: UNNotificationRequest, withContentHandler co
 }
 
 ```
+
+#### Cocoapods integration
+If you are using Cocoapods you need to add NSE to Podfile. Next to your application target add:
+(Replace PPGNotificationServiceExtension with the name you set)
+
+```bash
+target 'PPGNotificationServiceExtension' do
+  use_frameworks!
+  use_modular_headers!
+  pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '3.0.3'
+end
+```
+**Note:** While compiling app with Service Extension you might face a problem with UIApplication.shared
+To bypass it you will need to add this at the end of your Podfile:
+
+```bash
+ post_install do |installer|
+   installer.pods_project.targets.each do |target|
+     target.build_configurations.each do |config|
+       config.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'No'
+      end
+   end
+ end
+```
+Error will be resolved internally in sdk in next releases.
 
 # Usage guide
 
