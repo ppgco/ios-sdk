@@ -4,8 +4,8 @@
 > **Version 3.0.3**
 >
 > Welcome back Cocoapods - from this version you can integrate via:
-> SPM
-> Cocoapods
+> 1. SPM
+> 2. Cocoapods
 > 
 > **Version 3.0.1+ integration**
 >
