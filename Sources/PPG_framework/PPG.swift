@@ -145,6 +145,19 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             response: response, button: button)
     }
 
+    // Get supported URL schemes from Info.plist or fall back to defaults
+    public static func getSupportedUrlSchemes() -> [String] {
+        if let urlSchemes = Bundle.main.object(forInfoDictionaryKey: "PPGSupportedURLSchemes") as? [String], !urlSchemes.isEmpty {
+            return urlSchemes
+        }
+        return ["http", "https", "app"]
+    }
+
+    private static func isUrlWithSupportedScheme(_ urlString: String) -> Bool {
+        let schemes = getSupportedUrlSchemes()
+        return schemes.contains { scheme in urlString.starts(with: scheme) }
+    }
+    
     public static func getUrlFromNotificationResponse(
         response: UNNotificationResponse
     ) -> (URL?, Bool) {
@@ -166,7 +179,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             
             guard index < actions.count,
                 let urlString = actions[index]["url"] as? String,
-                urlString.starts(with: "http") || urlString.starts(with: "app"),
+                isUrlWithSupportedScheme(urlString),
                 let url = URL(string: urlString) else {
                 return (nil, false)
             }
@@ -180,7 +193,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         if let aps = userInfo["aps"] as? [String: Any],
            let urlArgs = aps["url-args"] as? [String],
            let link = urlArgs.first,
-           link.starts(with: "http") || link.starts(with: "app"),
+           isUrlWithSupportedScheme(link),
            let url = URL(string: link) {
             // Check root level UL flag for default click URL
             let isUniversalLink = userInfo["UL"] as? Bool ?? false

@@ -70,7 +70,10 @@ class EventManager {
         }
 
         dispatchGroup.notify(queue: .main) {
-            self.setEvents(events: validEvents)
+            let currentEvents = self.getEvents()
+            let eventsToKeep = currentEvents.filter { !$0.canDelete() }
+            self.setEvents(events: eventsToKeep)
+
             handler(validEvents)
         }
     }
