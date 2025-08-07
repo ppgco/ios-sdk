@@ -23,6 +23,8 @@
 Tutorial: https://docs.pushpushgo.company/application/providers/mobile-push/apns
 
 ### Install framework
+Before you start, make sure to remove all previous integrations with other providers.
+
 Choose one of options:
 - SPM (recommended)
 - Direct download
