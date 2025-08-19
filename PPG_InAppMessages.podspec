@@ -1,11 +1,12 @@
 Pod::Spec.new do |s|
-  s.name             = 'PPG_framework'
+  s.name             = 'PPG_InAppMessages'
   s.version          = '3.0.5'
-  s.summary          = 'PushPushGo SDK for iOS.'
+  s.summary          = 'PushPushGo In-App Messages SDK for iOS.'
 
   # A more detailed description of the pod.
   s.description      = <<-DESC
-                       The PushPushGo SDK allows easy integration of push notification services for iOS applications.
+                       The PushPushGo In-App Messages SDK allows easy integration of in-app messaging services for iOS applications.
+                       Features include audience targeting, custom triggers, and seamless integration with push notifications.
                        DESC
 
   s.homepage         = 'https://pushpushgo.com/pl/'
@@ -19,6 +20,9 @@ Pod::Spec.new do |s|
   s.ios.deployment_target = '13.0'
   s.swift_version = '5.3'
 
-  s.source_files = 'Sources/PPG_framework/**/*.{h,m,swift}'
+  s.source_files = 'Sources/PPG_InAppMessages/**/*.{h,m,swift}'
+
+  # Framework dependencies
+  s.frameworks = 'UIKit', 'WebKit', 'Foundation'
 
 end
