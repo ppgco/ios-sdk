@@ -12,14 +12,15 @@ public class Template1FullscreenView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
+        // Apply border radius (always, regardless of border setting)
+        containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
+        containerView.clipsToBounds = true
+        
         // Apply border styling
         if message.style.border {
             containerView.layer.borderWidth = CGFloat(message.style.borderWidth)
             containerView.layer.borderColor = UIColor(hex: message.style.borderColor).cgColor
         }
-        
-        // Apply border radius
-        containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
         
         // Apply drop shadow if enabled
         if message.style.dropShadow {
@@ -97,8 +98,9 @@ public class Template1FullscreenView {
         // Apply paddingBody to content section first
         let paddingBody = UIStyleParser.parsePaddingString(message.layout.paddingBody)
         
-        // Check if content should be centered (when paddingBody is minimal - spaceBetweenImageAndBody doesn't affect this)
-        let shouldCenterContent = paddingBody.top <= 5 && paddingBody.bottom <= 5
+        // Check if content should be centered (only when ALL paddingBody values are 0 or very close to 0)
+        let shouldCenterContent = paddingBody.top <= 1 && paddingBody.bottom <= 1 && 
+                                 paddingBody.left <= 1 && paddingBody.right <= 1
         
         // Create vertical stack for content with proper spacing from layout
         let contentStack = UIStackView()
@@ -113,13 +115,13 @@ public class Template1FullscreenView {
         
         // Add title with font family
         if let title = message.title {
-            let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, forceFullWidth: forceFullWidth)
+            let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl, forceFullWidth: forceFullWidth)
             contentStack.addArrangedSubview(titleLabel)
         }
         
         // Add description with font family
         if let description = message.description {
-            let descriptionLabel = SharedUIComponents.createDescriptionLabel(for: description, fontFamily: message.style.fontFamily, forceFullWidth: forceFullWidth)
+            let descriptionLabel = SharedUIComponents.createDescriptionLabel(for: description, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl, forceFullWidth: forceFullWidth)
             contentStack.addArrangedSubview(descriptionLabel)
         }
         
@@ -139,7 +141,7 @@ public class Template1FullscreenView {
         sectionView.addSubview(contentStack)
         
         if shouldCenterContent {
-            // Center content in the section with full width when paddingBody is 0
+            // When paddingBody is zero, stretch full width and center vertically
             NSLayoutConstraint.activate([
                 contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
                 contentStack.centerYAnchor.constraint(equalTo: sectionView.centerYAnchor),
@@ -147,12 +149,12 @@ public class Template1FullscreenView {
                 contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right)
             ])
         } else {
-            // Use paddingBody constraints
+            // When paddingBody has values, apply exact padding and center vertically
             NSLayoutConstraint.activate([
-                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: paddingBody.top),
+                contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
+                contentStack.centerYAnchor.constraint(equalTo: sectionView.centerYAnchor),
                 contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingBody.left),
-                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right),
-                contentStack.bottomAnchor.constraint(lessThanOrEqualTo: sectionView.bottomAnchor, constant: -paddingBody.bottom)
+                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right)
             ])
         }
         

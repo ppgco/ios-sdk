@@ -11,9 +11,15 @@ public class Template3HorizontalView {
     public static func createView(for message: InAppMessage) -> UIView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
+        
+        // Apply border radius (always, regardless of border setting)
         containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
-        containerView.layer.borderWidth = CGFloat(message.style.borderWidth)
-        containerView.layer.borderColor = UIColor(hex: message.style.borderColor).cgColor
+        
+        // Apply border styling
+        if message.style.border {
+            containerView.layer.borderWidth = CGFloat(message.style.borderWidth)
+            containerView.layer.borderColor = UIColor(hex: message.style.borderColor).cgColor
+        }
         containerView.clipsToBounds = true
         
         // Add drop shadow if enabled
@@ -97,13 +103,13 @@ public class Template3HorizontalView {
         
         // Add title with font family
         if let title = message.title {
-            let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily)
+            let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
             contentStack.addArrangedSubview(titleLabel)
         }
         
         // Add description with font family
         if let description = message.description {
-            let descriptionLabel = SharedUIComponents.createDescriptionLabel(for: description, fontFamily: message.style.fontFamily)
+            let descriptionLabel = SharedUIComponents.createDescriptionLabel(for: description, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
             contentStack.addArrangedSubview(descriptionLabel)
         }
         

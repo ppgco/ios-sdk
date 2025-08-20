@@ -57,7 +57,7 @@ public class SharedUIComponents {
     // MARK: - Label Creation
     
     /// Create title label with font family support
-    public static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+    public static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
         let label = UILabel()
         label.text = title.text
         
@@ -68,6 +68,12 @@ public class SharedUIComponents {
             } else {
                 // Fallback to system font with weight
                 label.font = UIFont.systemFont(ofSize: CGFloat(title.fontSize), weight: UIStyleParser.parseFontWeight(title.fontWeight))
+                InAppLogger.shared.info("Font '\(fontFamily)' not found, using system font")
+                
+                // Note: fontUrl support requires font download and registration - not implemented yet
+                if let fontUrl = fontUrl, !fontUrl.isEmpty {
+                    InAppLogger.shared.info("fontUrl provided: \(fontUrl) - custom font loading not yet implemented")
+                }
             }
         } else {
             label.font = UIFont.systemFont(ofSize: CGFloat(title.fontSize), weight: UIStyleParser.parseFontWeight(title.fontWeight))
@@ -81,7 +87,7 @@ public class SharedUIComponents {
     }
     
     /// Create description label with font family support
-    public static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+    public static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
         let label = UILabel()
         label.text = description.text
         
@@ -92,6 +98,12 @@ public class SharedUIComponents {
             } else {
                 // Fallback to system font with weight
                 label.font = UIFont.systemFont(ofSize: CGFloat(description.fontSize), weight: UIStyleParser.parseFontWeight(description.fontWeight))
+                InAppLogger.shared.info("Font '\(fontFamily)' not found, using system font")
+                
+                // Note: fontUrl support requires font download and registration - not implemented yet
+                if let fontUrl = fontUrl, !fontUrl.isEmpty {
+                    InAppLogger.shared.info("fontUrl provided: \(fontUrl) - custom font loading not yet implemented")
+                }
             }
         } else {
             label.font = UIFont.systemFont(ofSize: CGFloat(description.fontSize), weight: UIStyleParser.parseFontWeight(description.fontWeight))

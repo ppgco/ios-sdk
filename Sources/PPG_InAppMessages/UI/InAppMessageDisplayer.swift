@@ -101,11 +101,19 @@ public class InAppMessageDisplayer {
         // Setup action button targets
         setupActionTargets(in: messageView)
         
-        // Animate in
-        messageView.alpha = 0
-        messageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
-        
-        UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
+        // Animate in based on animationType
+        if message.style.animationType == "appear" {
+            // Appear animation
+            messageView.alpha = 0
+            messageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
+            
+            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
+                messageView.alpha = 1
+                messageView.transform = .identity
+                self.overlayView?.alpha = 1
+            }
+        } else {
+            // No animation - just appear instantly
             messageView.alpha = 1
             messageView.transform = .identity
             self.overlayView?.alpha = 1
