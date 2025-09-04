@@ -389,12 +389,21 @@ public class SharedUIComponents {
     
     // MARK: - Actions Container
     
-    /// Create horizontal actions stack view
+    /// Create actions stack view (vertical for Template 1, horizontal for others)
     public static func createActionsView(for message: InAppMessage, fillWidth: Bool = false) -> UIView {
         let stackView = UIStackView()
-        stackView.axis = .horizontal
-        stackView.spacing = 8
-        stackView.distribution = .fillEqually
+        
+        // Use vertical layout for Template 1 (fullscreen) when fillWidth is true
+        if fillWidth {
+            stackView.axis = .vertical
+            stackView.spacing = 12  // More spacing between vertical buttons
+            stackView.distribution = .fill
+        } else {
+            stackView.axis = .horizontal
+            stackView.spacing = 8
+            stackView.distribution = .fillEqually
+        }
+        
         stackView.translatesAutoresizingMaskIntoConstraints = false
         
         // Add action buttons with extra height for Template 1 (fullscreen)
@@ -404,11 +413,6 @@ public class SharedUIComponents {
                 let button = createActionButton(for: action, actionIndex: index, extraHeight: extraHeight, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
                 stackView.addArrangedSubview(button)
             }
-        }
-        
-        // For Template 1, ensure full width
-        if fillWidth {
-            stackView.distribution = .fill
         }
         
         return stackView

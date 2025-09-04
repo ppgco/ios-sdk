@@ -120,16 +120,12 @@ public class FontManager {
     }
     
     private func findFallbackFontInFamily(family: String, originalWeight: Int, style: String, size: CGFloat) -> UIFont? {
-        InAppLogger.shared.info("🔍 Looking for fallback in '\(family)' for weight \(originalWeight), style '\(style)'")
-        
         let baseFamily = mapFamilyToFontName(family)
         let isItalic = style.lowercased() == "italic"
         let allWeights = weightMap.keys.sorted()
         
         // Try weights in order of proximity to original weight
         let sortedByProximity = allWeights.sorted { abs($0 - originalWeight) < abs($1 - originalWeight) }
-        
-        InAppLogger.shared.info("🔍 Trying weights by proximity: \(sortedByProximity)")
         
         for weight in sortedByProximity {
             // Skip original weight we already tried
@@ -141,15 +137,12 @@ public class FontManager {
             let adjustedVariant = adjustVariantForFamily(variant: fallbackVariant, family: family)
             let fallbackFontName = "\(baseFamily)-\(adjustedVariant)\(isItalic ? "Italic" : "")"
             
-            InAppLogger.shared.info("🔍 Trying weight \(weight): \(fallbackFontName)")
-            
             if let font = UIFont(name: fallbackFontName, size: size) {
-                InAppLogger.shared.info("🔄 Fallback SUCCESS: \(originalWeight) → \(weight) (\(fallbackFontName))")
+                InAppLogger.shared.info("🔄 Fallback: \(originalWeight) → \(weight) (\(fallbackFontName))")
                 return font
             }
         }
         
-        InAppLogger.shared.info("🔍 No fallback fonts found in family")
         return nil
     }
     
@@ -250,8 +243,6 @@ public class FontManager {
     // MARK: - Font Registration
     
     private func registerAllBundledFonts() {
-        InAppLogger.shared.info("🔤 Font registration started")
-        
         for (family, structure) in fontStructures {
             registerFontFamily(family, structure: structure)
         }
@@ -262,34 +253,22 @@ public class FontManager {
     private func registerFontFamily(_ family: String, structure: FontStructure) {
         guard let bundle = getBundle() else { return }
         
-        InAppLogger.shared.info("🔍 Bundle path: \(bundle.bundlePath)")
-        
-        // Debug: List all TTF files in bundle
-        let allTTFs = bundle.paths(forResourcesOfType: "ttf", inDirectory: nil)
-        InAppLogger.shared.info("🔍 All TTF files in bundle: \(allTTFs.count)")
-        for ttf in allTTFs.prefix(5) {
-            InAppLogger.shared.info("📄 TTF: \(ttf)")
-        }
-        
         let searchPath = buildSearchPath(family: family, structure: structure)
         let fontPaths = bundle.paths(forResourcesOfType: "ttf", inDirectory: searchPath)
-        
-        InAppLogger.shared.info("📁 \(family): \(fontPaths.count) fonts in \(searchPath)")
         
         // Try alternative paths if main search fails
         if fontPaths.isEmpty {
             let internalFamily = mapToInternalFontName(family)
             let alternativePaths = [
-                "Fonts/\(internalFamily)",  // Primary path based on debug output
+                "Fonts/\(internalFamily)",
                 "Fonts/\(internalFamily)/static",
-                internalFamily,  // Fallback without prefix
+                internalFamily,
                 "\(internalFamily)/static"
             ]
             
             for altPath in alternativePaths {
                 let altFonts = bundle.paths(forResourcesOfType: "ttf", inDirectory: altPath)
                 if !altFonts.isEmpty {
-                    InAppLogger.shared.info("✅ Found \(altFonts.count) fonts in alternative path: \(altPath)")
                     for path in altFonts {
                         registerSingleFont(at: path)
                     }
@@ -339,19 +318,12 @@ public class FontManager {
         
         if success, let postScriptName = cgFont.postScriptName {
             registeredFonts.insert(postScriptName as String)
-            
-            // Debug: Show actual font family name after registration
-            let font = CTFontCreateWithGraphicsFont(cgFont, 12.0, nil, nil)
-            let familyName = CTFontCopyFamilyName(font) as String
-            let fontName = CTFontCopyFullName(font) as String
-            
-            InAppLogger.shared.info("🔠 Registered: '\(fontName)' family: '\(familyName)' ps: '\(postScriptName)'")
         } else if let error = error {
             let cfError = error.takeUnretainedValue()
             let code = CFErrorGetCode(cfError)
             
             if code != 105 { // 105 = already registered (OK)
-                InAppLogger.shared.info("⚠️ Registration failed: \(CFErrorCopyDescription(cfError) ?? "" as CFString)")
+                InAppLogger.shared.info("⚠️ Font registration failed: \(CFErrorCopyDescription(cfError) ?? "" as CFString)")
             }
         }
     }

@@ -34,20 +34,34 @@ public class Template1FullscreenView {
         
         containerView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Create main stack for 50/50 split
+        // Create main stack - layout depends on image visibility
         let mainStack = UIStackView()
         mainStack.axis = .vertical
-        mainStack.distribution = .fillEqually
         mainStack.spacing = CGFloat(message.layout.spaceBetweenImageAndBody)
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Top section - Image (50% of screen)
-        let imageSection = createImageSection(for: message)
-        mainStack.addArrangedSubview(imageSection)
+        // Check if image should be shown
+        let shouldShowImage = message.image != nil && !message.image!.url.isEmpty && !message.image!.hideOnMobile
         
-        // Bottom section - Content (50% of screen)
-        let contentSection = createContentSection(for: message)
-        mainStack.addArrangedSubview(contentSection)
+        if shouldShowImage {
+            // 50/50 split when image is visible
+            mainStack.distribution = .fillEqually
+            
+            // Top section - Image (50% of screen)
+            let imageSection = createImageSection(for: message)
+            mainStack.addArrangedSubview(imageSection)
+            
+            // Bottom section - Content (50% of screen)
+            let contentSection = createContentSection(for: message)
+            mainStack.addArrangedSubview(contentSection)
+        } else {
+            // Full height for content when image is hidden
+            mainStack.distribution = .fill
+            
+            // Only content section - takes full height
+            let contentSection = createContentSection(for: message)
+            mainStack.addArrangedSubview(contentSection)
+        }
         
         containerView.addSubview(mainStack)
         
