@@ -36,12 +36,12 @@ public class Template3HorizontalView {
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         
         // Add image section (left side - 40% width)
-        if let image = message.image, !image.url.isEmpty {
-            let imageSection = createImageSection(for: image)
-            mainStack.addArrangedSubview(imageSection)
+        if let imageData = message.image, !imageData.url.isEmpty, !imageData.hideOnMobile {
+            let imageView = SharedUIComponents.createImageView(for: imageData.url)
+            mainStack.addArrangedSubview(imageView)
             
             // Set image width to 40% of container
-            imageSection.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.4).isActive = true
+            imageView.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.4).isActive = true
         }
         
         // Add content section (right side - 60% width)
@@ -130,14 +130,14 @@ public class Template3HorizontalView {
         
         contentView.addSubview(contentStack)
         
-        // Apply paddingBody from layout
-        let paddingBody = UIStyleParser.parsePaddingString(message.layout.paddingBody)
+        // Apply padding from layout
+        let paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
         
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingBody.top),
-            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: paddingBody.left),
-            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -paddingBody.right),
-            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -paddingBody.bottom)
+            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingValues.top),
+            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: paddingValues.left),
+            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -paddingValues.right),
+            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -paddingValues.bottom)
         ])
         
         return contentView
@@ -152,20 +152,25 @@ public class Template3HorizontalView {
         view.layer.masksToBounds = false
     }
     
-    /// Setup constraints for desktop modal
-    public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController) {
+    /// Setup constraints for horizontal modal with placement support
+    public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
-        let margin: CGFloat = 20
+        let margin = UIStyleParser.parseFloat(marginString ?? "20px")
         
         let screenWidth = viewController.view.frame.width
         let screenHeight = viewController.view.frame.height
         let maxWidth: CGFloat = 520
         let preferredWidth = min(maxWidth, screenWidth - 40)
         
-        NSLayoutConstraint.activate([
-            // Center horizontally and vertically
+        // Determine position based on placement
+        let placementUpper = (placement ?? "CENTER").uppercased()
+        let isTop = placementUpper.hasPrefix("TOP")
+        let isBottom = placementUpper.hasPrefix("BOTTOM")
+        // CENTER, LEFT, RIGHT all go to center
+        
+        var constraints: [NSLayoutConstraint] = [
+            // Always center horizontally
             messageView.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
-            messageView.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor),
             
             // Width constraints
             messageView.widthAnchor.constraint(equalToConstant: preferredWidth),
@@ -175,8 +180,21 @@ public class Template3HorizontalView {
             // Height constraints - content-driven but with limits
             messageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
             messageView.heightAnchor.constraint(lessThanOrEqualToConstant: screenHeight * 0.8)
-        ])
+        ]
         
-        InAppLogger.shared.info("↔️ Template 3 Horizontal Modal: \(preferredWidth)px wide, image left + content right")
+        // Add vertical positioning based on placement
+        if isTop {
+            constraints.append(messageView.topAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.topAnchor, constant: margin))
+        } else if isBottom {
+            constraints.append(messageView.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -margin))
+        } else {
+            // CENTER (default)
+            constraints.append(messageView.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor))
+        }
+        
+        NSLayoutConstraint.activate(constraints)
+        
+        let positionDesc = isTop ? "top" : (isBottom ? "bottom" : "centered")
+        InAppLogger.shared.info("↔️ Template 3 Horizontal Modal: \(preferredWidth)px wide, \(positionDesc), image left + content right")
     }
 }

@@ -14,7 +14,6 @@ public class Template1FullscreenView {
         
         // Apply border radius (always, regardless of border setting)
         containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
-        containerView.clipsToBounds = true
         
         // Apply border styling
         if message.style.border {
@@ -28,6 +27,9 @@ public class Template1FullscreenView {
             containerView.layer.shadowOffset = CGSize(width: 0, height: 4)
             containerView.layer.shadowOpacity = 0.3
             containerView.layer.shadowRadius = 8
+            containerView.layer.masksToBounds = false
+        } else {
+            containerView.clipsToBounds = true
         }
         
         containerView.translatesAutoresizingMaskIntoConstraints = false
@@ -52,10 +54,10 @@ public class Template1FullscreenView {
         // Apply padding to main stack
         let padding = UIStyleParser.parsePaddingString(message.layout.padding)
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: containerView.safeAreaLayoutGuide.topAnchor, constant: padding.top),
+            mainStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding.top),
             mainStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding.left),
             mainStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding.right),
-            mainStack.bottomAnchor.constraint(equalTo: containerView.safeAreaLayoutGuide.bottomAnchor, constant: -padding.bottom)
+            mainStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -padding.bottom)
         ])
         
         return containerView
@@ -65,23 +67,29 @@ public class Template1FullscreenView {
     private static func createImageSection(for message: InAppMessage) -> UIView {
         let sectionView = UIView()
         
+        // Apply corner radius to section (only top corners for top section)
+        let borderRadius = UIStyleParser.parseFloat(message.style.borderRadius)
+        sectionView.layer.cornerRadius = borderRadius
+        sectionView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+        sectionView.clipsToBounds = true
+        
         if let image = message.image, !image.url.isEmpty {
-            let imageView = UIImageView()
-            imageView.contentMode = .scaleAspectFill
-            imageView.clipsToBounds = true
-            imageView.translatesAutoresizingMaskIntoConstraints = false
-            
-            // Load image
-            SharedUIComponents.loadImageAsync(from: image.url, into: imageView)
-            
-            sectionView.addSubview(imageView)
-            
-            NSLayoutConstraint.activate([
-                imageView.topAnchor.constraint(equalTo: sectionView.topAnchor),
-                imageView.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor),
-                imageView.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor),
-                imageView.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor)
-            ])
+            if let imageData = message.image, !imageData.hideOnMobile {
+                let imageUIView = SharedUIComponents.createImageView(for: imageData.url)
+                imageUIView.translatesAutoresizingMaskIntoConstraints = false
+                imageUIView.backgroundColor = UIColor.systemGray6 // Fallback background
+                sectionView.addSubview(imageUIView)
+                
+                NSLayoutConstraint.activate([
+                    imageUIView.topAnchor.constraint(equalTo: sectionView.topAnchor),
+                    imageUIView.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor),
+                    imageUIView.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor),
+                    imageUIView.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor)
+                ])
+            } else {
+                // If image hidden on mobile, use background color
+                sectionView.backgroundColor = UIColor(hex: message.style.backgroundColor)
+            }
         } else {
             // If no image, use background color
             sectionView.backgroundColor = UIColor(hex: message.style.backgroundColor)
@@ -141,12 +149,13 @@ public class Template1FullscreenView {
         sectionView.addSubview(contentStack)
         
         if shouldCenterContent {
-            // When paddingBody is zero, stretch full width and center vertically
+            // When padding is zero, stretch full width and center vertically
+            let paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
             NSLayoutConstraint.activate([
                 contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
                 contentStack.centerYAnchor.constraint(equalTo: sectionView.centerYAnchor),
-                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingBody.left),
-                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right)
+                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingValues.left),
+                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingValues.right)
             ])
         } else {
             // When paddingBody has values, apply exact padding and center vertically
@@ -166,10 +175,10 @@ public class Template1FullscreenView {
         messageView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            messageView.topAnchor.constraint(equalTo: viewController.view.topAnchor),
+            messageView.topAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.topAnchor),
             messageView.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor),
             messageView.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
-            messageView.bottomAnchor.constraint(equalTo: viewController.view.bottomAnchor)
+            messageView.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor)
         ])
         
         InAppLogger.shared.info("📱 Template 1 Fullscreen: Image 50% + Content 50%")

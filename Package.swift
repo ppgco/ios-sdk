@@ -35,6 +35,9 @@ let package = Package(
             name: "PPG_InAppMessages",
             dependencies: [],
             path: "Sources/PPG_InAppMessages",
+            resources: [
+                .copy("Resources/Fonts")
+            ],
             linkerSettings: [
                 .linkedFramework("UIKit", .when(platforms: [.iOS])),
                 .linkedFramework("WebKit", .when(platforms: [.iOS])),
