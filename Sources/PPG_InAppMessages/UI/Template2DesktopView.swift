@@ -27,28 +27,31 @@ public class Template2DesktopView {
             addDropShadow(to: containerView)
         }
         
-        // Main content stack
+        // Main horizontal stack - image 30% left + content 70% right
         let mainStack = UIStackView()
-        mainStack.axis = .vertical
+        mainStack.axis = .horizontal
         mainStack.spacing = CGFloat(message.layout.spaceBetweenImageAndBody)
-        mainStack.alignment = .fill
+        mainStack.alignment = .top
+        mainStack.distribution = .fill
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Add image if present and not hidden on mobile
-        if let imageData = message.image, !imageData.url.isEmpty, !imageData.hideOnMobile {
-            let imageView = SharedUIComponents.createImageView(for: imageData.url)
-            imageView.heightAnchor.constraint(equalToConstant: 200).isActive = true
-            mainStack.addArrangedSubview(imageView)
+        // Check if image should be shown
+        let shouldShowImage = message.image != nil && !message.image!.url.isEmpty && !message.image!.hideOnMobile
+        
+        if shouldShowImage {
+            // Left section - Image (fixed 72x72px)
+            let imageSection = createImageSection(for: message.image!)
+            mainStack.addArrangedSubview(imageSection)
         }
         
-        // Add content section
+        // Right section - Content (70% width when image present, 100% when not)
         let contentSection = createContentSection(for: message)
         mainStack.addArrangedSubview(contentSection)
         
         containerView.addSubview(mainStack)
         
-        // Apply padding
-        let padding = UIStyleParser.parsePadding(message.layout.paddingBody)
+        // Apply main container padding (layout.padding)
+        let padding = UIStyleParser.parsePadding(message.layout.padding)
         
         NSLayoutConstraint.activate([
             mainStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding.top),
@@ -60,19 +63,32 @@ public class Template2DesktopView {
         return containerView
     }
     
-    /// Create image section for desktop modal
-    private static func createImageSection(for image: MessageImage) -> UIImageView {
+    /// Create image section for desktop modal (fixed 72x72px square)
+    private static func createImageSection(for image: MessageImage) -> UIView {
+        let imageContainer = UIView()
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
+        
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
         
         // Load image
         SharedUIComponents.loadImageAsync(from: image.url, into: imageView)
         
-        // Set aspect ratio constraint (16:9 or similar)
-        imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: 9.0/16.0).isActive = true
+        imageContainer.addSubview(imageView)
         
-        return imageView
+        // Fixed 72x72px size as per CSS specification
+        NSLayoutConstraint.activate([
+            imageContainer.widthAnchor.constraint(equalToConstant: 72),
+            imageContainer.heightAnchor.constraint(equalToConstant: 72),
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor)
+        ])
+        
+        return imageContainer
     }
     
     /// Create content section
@@ -103,25 +119,86 @@ public class Template2DesktopView {
             spacer.heightAnchor.constraint(equalToConstant: CGFloat(message.layout.spaceBetweenContentAndActions)).isActive = true
             contentStack.addArrangedSubview(spacer)
             
-            // Add actions
-            let actionsView = SharedUIComponents.createActionsView(for: message)
+            // Add actions with reversed order for Template 2
+            let actionsView = createReversedActionsView(for: message)
             contentStack.addArrangedSubview(actionsView)
         }
         
         contentView.addSubview(contentStack)
         
-        // Apply padding from layout
-        let paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
-        
+        // No padding here - it's already applied at the main stack level
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingValues.top),
-            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: paddingValues.left),
-            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -paddingValues.right),
-            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -paddingValues.bottom)
+            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor),
+            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
         ])
         
         return contentView
     }
+    
+    /// Create actions view with reversed order (Template 2 specific)
+    private static func createReversedActionsView(for message: InAppMessage) -> UIView {
+        let containerView = UIView()
+        containerView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Create buttons in reverse order
+        var buttons: [UIButton] = []
+        for (_, action) in message.actions.enumerated().reversed() {
+            if action.enabled {
+                let button = SharedUIComponents.createActionButton(for: action, actionIndex: 0, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
+                button.translatesAutoresizingMaskIntoConstraints = false
+                
+                // Force button to calculate its proper size
+                button.sizeToFit()
+                button.invalidateIntrinsicContentSize()
+                button.setNeedsLayout()
+                button.layoutIfNeeded()
+                
+                // Force titleLabel to update
+                button.titleLabel?.sizeToFit()
+                button.titleLabel?.invalidateIntrinsicContentSize()
+                
+                containerView.addSubview(button)
+                buttons.append(button)
+            }
+        }
+        
+        // Manual constraints WITH equal widths but allowing different heights
+        if buttons.count == 2 {
+            let button1 = buttons[0]
+            let button2 = buttons[1]
+            
+            NSLayoutConstraint.activate([
+                // Vertical positioning - top aligned
+                button1.topAnchor.constraint(equalTo: containerView.topAnchor),
+                button2.topAnchor.constraint(equalTo: containerView.topAnchor),
+                
+                // Horizontal positioning with 8px spacing
+                button1.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                button2.leadingAnchor.constraint(equalTo: button1.trailingAnchor, constant: 8),
+                button2.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                
+                // RESTORED equal width constraint - buttons should have same width
+                button1.widthAnchor.constraint(equalTo: button2.widthAnchor),
+                
+                // Container height matches tallest button
+                containerView.bottomAnchor.constraint(greaterThanOrEqualTo: button1.bottomAnchor),
+                containerView.bottomAnchor.constraint(greaterThanOrEqualTo: button2.bottomAnchor)
+            ])
+        } else if buttons.count == 1 {
+            let button = buttons[0]
+            NSLayoutConstraint.activate([
+                button.topAnchor.constraint(equalTo: containerView.topAnchor),
+                button.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+                button.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+                button.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
+            ])
+        }
+        
+        return containerView
+    }
+    
     
     /// Add drop shadow to container
     private static func addDropShadow(to view: UIView) {
@@ -135,31 +212,31 @@ public class Template2DesktopView {
     /// Setup constraints for desktop modal with placement support
     public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
-        let margin = UIStyleParser.parseFloat(marginString ?? "20px")
+        // Template2 uses fixed margin, ignores backend layout.margin
+        let margin: CGFloat = 15
         
         let screenWidth = viewController.view.frame.width
         let screenHeight = viewController.view.frame.height
         let maxWidth: CGFloat = 520
         let preferredWidth = min(maxWidth, screenWidth - 40)
         
-        // Determine position based on placement
+        // Determine position based on placement (Template2 always centered horizontally)
         let placementUpper = (placement ?? "CENTER").uppercased()
         let isTop = placementUpper.hasPrefix("TOP")
         let isBottom = placementUpper.hasPrefix("BOTTOM")
-        // CENTER, LEFT, RIGHT all go to center
+        // Note: Template2 ignores LEFT/RIGHT - always centers horizontally
         
         var constraints: [NSLayoutConstraint] = [
-            // Always center horizontally
-            messageView.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
-            
             // Width constraints
             messageView.widthAnchor.constraint(equalToConstant: preferredWidth),
             messageView.leadingAnchor.constraint(greaterThanOrEqualTo: viewController.view.leadingAnchor, constant: margin),
             messageView.trailingAnchor.constraint(lessThanOrEqualTo: viewController.view.trailingAnchor, constant: -margin),
             
-            // Height constraints - let content determine but set limits
-            messageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
-            messageView.heightAnchor.constraint(lessThanOrEqualToConstant: screenHeight * 0.8)
+            // Height constraints - let content determine size naturally
+            messageView.heightAnchor.constraint(lessThanOrEqualToConstant: screenHeight * 0.8),
+            
+            // Always center horizontally for Template2
+            messageView.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor)
         ]
         
         // Add vertical positioning based on placement
@@ -174,7 +251,7 @@ public class Template2DesktopView {
         
         NSLayoutConstraint.activate(constraints)
         
-        let positionDesc = isTop ? "top" : (isBottom ? "bottom" : "centered")
-        InAppLogger.shared.info("🖥️ Template 2 Desktop Modal: \(preferredWidth)px wide, \(positionDesc)")
+        let verticalDesc = isTop ? "top" : (isBottom ? "bottom" : "center")
+        InAppLogger.shared.info("🖥️ Template 2 Desktop Modal: \(preferredWidth)px wide, \(verticalDesc)-center")
     }
 }

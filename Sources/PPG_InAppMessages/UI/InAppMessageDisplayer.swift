@@ -198,11 +198,13 @@ public class InAppMessageDisplayer {
     
     /// Setup constraints using template-specific methods
     private func setupTemplateConstraints(_ messageView: UIView, in viewController: UIViewController, templateType: TemplateType) {
+        guard let message = currentMessage else { return }
+        
         switch templateType {
         case .fullscreen:
             Template1FullscreenView.setupConstraints(messageView, in: viewController)
         case .desktop:
-            Template2DesktopView.setupConstraints(messageView, in: viewController)
+            Template2DesktopView.setupConstraints(messageView, in: viewController, placement: message.layout.placement, marginString: message.layout.margin)
         case .horizontal:
             Template3HorizontalView.setupConstraints(messageView, in: viewController)
         }

@@ -95,7 +95,7 @@ public class SharedUIComponents {
             }
         }
         
-        // Add padding
+        // Add padding - use original values from backend
         let padding = UIStyleParser.parsePadding(action.padding)
         let adjustedPadding = UIEdgeInsets(
             top: padding.top + extraHeight/2, 
@@ -104,6 +104,36 @@ public class SharedUIComponents {
             right: padding.right
         )
         button.contentEdgeInsets = adjustedPadding
+        
+        // Configure button for multiline text support
+        button.titleLabel?.numberOfLines = 0
+        button.titleLabel?.lineBreakMode = .byWordWrapping
+        button.titleLabel?.textAlignment = .center
+        
+        // Ensure button expands to fit content properly
+        button.titleLabel?.adjustsFontSizeToFitWidth = false
+        button.setContentCompressionResistancePriority(.required, for: .vertical)
+        button.setContentHuggingPriority(.defaultHigh, for: .vertical)
+        
+        // Force exact height calculation based on actual text content
+        // Use actual font from button for accurate measurement
+        let actualFont = button.titleLabel?.font ?? UIFont.systemFont(ofSize: 16)
+        let maxWidth: CGFloat = 120 // Smaller width to force text wrapping for longer texts
+        
+        let textBounds = (action.text as NSString).boundingRect(
+            with: CGSize(width: maxWidth - adjustedPadding.left - adjustedPadding.right, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: actualFont],
+            context: nil
+        )
+        
+        // Calculate exact height needed - use ceiling to avoid fractional pixels
+        let exactHeight = ceil(textBounds.height + adjustedPadding.top + adjustedPadding.bottom + 16)
+        
+        // Use exact height constraint instead of greaterThanOrEqual
+        button.heightAnchor.constraint(equalToConstant: exactHeight).isActive = true
+        
+        print("🔴 Button text: '\(action.text)' -> calculated height: \(exactHeight)");
         
         button.tag = actionIndex
         return button
