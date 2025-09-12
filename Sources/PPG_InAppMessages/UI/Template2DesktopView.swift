@@ -12,8 +12,8 @@ public class Template2DesktopView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
-        // Apply border radius (always, regardless of border setting)
-        containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
+        // Apply border radius with CACornerMask support for individual corners (iOS 11+)
+        UIStyleParser.applyBorderRadius(to: containerView, radiusString: message.style.borderRadius)
         
         // Apply border styling
         if message.style.border {
@@ -34,6 +34,7 @@ public class Template2DesktopView {
         mainStack.alignment = .top
         mainStack.distribution = .fill
         mainStack.translatesAutoresizingMaskIntoConstraints = false
+        mainStack.clipsToBounds = true
         
         // Check if image should be shown
         let shouldShowImage = message.image != nil && !message.image!.url.isEmpty && !message.image!.hideOnMobile
@@ -100,6 +101,7 @@ public class Template2DesktopView {
         contentStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
         contentStack.alignment = .fill
         contentStack.translatesAutoresizingMaskIntoConstraints = false
+        contentStack.clipsToBounds = true
         
         // Add title with font family
         if let title = message.title {
@@ -127,11 +129,14 @@ public class Template2DesktopView {
         contentView.addSubview(contentStack)
         
         // No padding here - it's already applied at the main stack level
+        // Apply paddingBody to the content container (title + description + actions)
+        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor),
-            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingBody.top),
+            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: paddingBody.left),
+            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -paddingBody.right),
+            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -paddingBody.bottom)
         ])
         
         return contentView
@@ -165,6 +170,7 @@ public class Template2DesktopView {
         }
         
         // Manual constraints WITH equal widths but allowing different heights
+        // No padding - buttons extend to edges and get clipped by container corner radius
         if buttons.count == 2 {
             let button1 = buttons[0]
             let button2 = buttons[1]
@@ -174,7 +180,7 @@ public class Template2DesktopView {
                 button1.topAnchor.constraint(equalTo: containerView.topAnchor),
                 button2.topAnchor.constraint(equalTo: containerView.topAnchor),
                 
-                // Horizontal positioning with 8px spacing
+                // Horizontal positioning with 8px spacing between buttons
                 button1.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
                 button2.leadingAnchor.constraint(equalTo: button1.trailingAnchor, constant: 8),
                 button2.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
@@ -203,9 +209,9 @@ public class Template2DesktopView {
     /// Add drop shadow to container
     private static func addDropShadow(to view: UIView) {
         view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOffset = CGSize(width: 0, height: 4)
-        view.layer.shadowRadius = 8
-        view.layer.shadowOpacity = 0.15
+        view.layer.shadowOffset = CGSize(width: 10, height: 15)
+        view.layer.shadowRadius = 10
+        view.layer.shadowOpacity = 0.30
         view.layer.masksToBounds = false
     }
     

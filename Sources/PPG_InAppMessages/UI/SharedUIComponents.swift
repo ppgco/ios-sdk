@@ -40,7 +40,8 @@ public class SharedUIComponents {
         button.backgroundColor = UIColor(hex: action.backgroundColor)
         button.layer.borderColor = UIColor(hex: action.borderColor).cgColor
         button.layer.borderWidth = 1
-        button.layer.cornerRadius = UIStyleParser.parseFloat(action.borderRadius)
+        // Apply borderRadius with CACornerMask support for individual corners (iOS 11+)
+        UIStyleParser.applyBorderRadius(to: button, radiusString: action.borderRadius)
         
         // Set initial system font
         let weight = UIStyleParser.parseFontWeight(action.fontWeight)
@@ -95,7 +96,7 @@ public class SharedUIComponents {
             }
         }
         
-        // Add padding - use original values from backend
+        // Add padding - supports single value or 4 values (top, right, bottom, left)
         let padding = UIStyleParser.parsePadding(action.padding)
         let adjustedPadding = UIEdgeInsets(
             top: padding.top + extraHeight/2, 
@@ -499,10 +500,10 @@ public class UIStyleParser {
         }
     }
     
-    /// Parse padding string to UIEdgeInsets
+    /// Parse padding string to UIEdgeInsets - supports both single values and CSS-style multi-values
     public static func parsePadding(_ paddingString: String) -> UIEdgeInsets {
-        let padding = parseFloat(paddingString)
-        return UIEdgeInsets(top: padding, left: padding, bottom: padding, right: padding)
+        // Use the more advanced parser that handles 1, 2, and 4 values
+        return parsePaddingString(paddingString)
     }
     
     /// Parse complex padding string like "48px 24px 48px 24px" to UIEdgeInsets
@@ -528,6 +529,73 @@ public class UIStyleParser {
             return UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
         default:
             return UIEdgeInsets.zero
+        }
+    }
+    
+    /// Parse border radius string - supports CSS-style values (1, 2, or 4 values)
+    public static func parseBorderRadius(_ radiusString: String) -> (topLeft: CGFloat, topRight: CGFloat, bottomRight: CGFloat, bottomLeft: CGFloat) {
+        let components = radiusString.split(separator: " ").map { String($0) }
+        
+        switch components.count {
+        case 1:
+            // Single value: all corners
+            let value = parseFloat(components[0])
+            return (topLeft: value, topRight: value, bottomRight: value, bottomLeft: value)
+        case 2:
+            // Two values: topLeft/bottomRight, topRight/bottomLeft
+            let value1 = parseFloat(components[0])
+            let value2 = parseFloat(components[1])
+            return (topLeft: value1, topRight: value2, bottomRight: value1, bottomLeft: value2)
+        case 4:
+            // Four values: topLeft, topRight, bottomRight, bottomLeft (not CSS order - backend specific)
+            let topLeft = parseFloat(components[0])     // lewy górny
+            let topRight = parseFloat(components[1])    // prawy górny  
+            let bottomRight = parseFloat(components[2]) // prawy dolny
+            let bottomLeft = parseFloat(components[3])  // lewy dolny
+            return (topLeft: topLeft, topRight: topRight, bottomRight: bottomRight, bottomLeft: bottomLeft)
+        default:
+            // Invalid format - return zero
+            return (topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0)
+        }
+    }
+    
+    /// Apply border radius with CACornerMask support for individual corners (iOS 11+)
+    /// Note: CALayer limitation - different radius per corner not possible, fallback to average
+    public static func applyBorderRadius(to view: UIView, radiusString: String) {
+        let borderRadius = parseBorderRadius(radiusString)
+        
+        // Check if all corners have the same radius
+        if borderRadius.topLeft == borderRadius.topRight &&
+           borderRadius.topRight == borderRadius.bottomRight &&
+           borderRadius.bottomRight == borderRadius.bottomLeft {
+            // All corners are the same - use simple cornerRadius
+            view.layer.cornerRadius = borderRadius.topLeft
+            view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        } else {
+            // Different corners - CALayer limitation: can't have different radius per corner
+            // Use minimum non-zero radius to avoid oversized corners
+            let nonZeroValues = [borderRadius.topLeft, borderRadius.topRight, borderRadius.bottomRight, borderRadius.bottomLeft].filter { $0 > 0 }
+            let minRadius = nonZeroValues.isEmpty ? 0 : nonZeroValues.min() ?? 0
+            
+            view.layer.cornerRadius = minRadius
+            
+            // Build maskedCorners based on which corners should be rounded
+            var maskedCorners: CACornerMask = []
+            
+            if borderRadius.topLeft > 0 {
+                maskedCorners.insert(.layerMinXMinYCorner)
+            }
+            if borderRadius.topRight > 0 {
+                maskedCorners.insert(.layerMaxXMinYCorner)
+            }
+            if borderRadius.bottomLeft > 0 {
+                maskedCorners.insert(.layerMinXMaxYCorner)
+            }
+            if borderRadius.bottomRight > 0 {
+                maskedCorners.insert(.layerMaxXMaxYCorner)
+            }
+            
+            view.layer.maskedCorners = maskedCorners
         }
     }
     

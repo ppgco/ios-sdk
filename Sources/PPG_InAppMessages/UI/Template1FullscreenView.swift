@@ -12,8 +12,8 @@ public class Template1FullscreenView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
-        // Apply border radius (always, regardless of border setting)
-        containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
+        // Apply border radius with CACornerMask support for individual corners (iOS 11+)
+        UIStyleParser.applyBorderRadius(to: containerView, radiusString: message.style.borderRadius)
         
         // Apply border styling
         if message.style.border {
@@ -82,8 +82,8 @@ public class Template1FullscreenView {
         let sectionView = UIView()
         
         // Apply corner radius to section (only top corners for top section)
-        let borderRadius = UIStyleParser.parseFloat(message.style.borderRadius)
-        sectionView.layer.cornerRadius = borderRadius
+        let borderRadius = UIStyleParser.parseBorderRadius(message.style.borderRadius)
+        sectionView.layer.cornerRadius = max(borderRadius.topLeft, borderRadius.topRight)
         sectionView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
         sectionView.clipsToBounds = true
         

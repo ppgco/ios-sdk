@@ -12,8 +12,8 @@ public class Template3HorizontalView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
-        // Apply border radius (always, regardless of border setting)
-        containerView.layer.cornerRadius = UIStyleParser.parseFloat(message.style.borderRadius)
+        // Apply border radius with CACornerMask support for individual corners (iOS 11+)
+        UIStyleParser.applyBorderRadius(to: containerView, radiusString: message.style.borderRadius)
         
         // Apply border styling
         if message.style.border {

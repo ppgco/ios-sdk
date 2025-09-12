@@ -3,6 +3,17 @@
 
 import Foundation
 import UIKit
+import PPG_framework
+
+// Custom view that sets shadowPath for better shadow performance
+private class ShadowContainerView: UIView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Update shadow path to match the view's bounds for better performance
+        layer.shadowPath = UIBezierPath(rect: bounds).cgPath
+    }
+}
 
 /// InAppMessageDisplayer handles the UI presentation logic and coordinates with template views
 public class InAppMessageDisplayer {
@@ -78,7 +89,41 @@ public class InAppMessageDisplayer {
         
         // Create message view using appropriate template
         let messageView = createTemplateView(for: message, templateType: templateType)
-        currentMessageView = messageView
+        messageView.clipsToBounds = true
+        
+        // Handle drop shadow with wrapper pattern
+        let finalView: UIView
+        if message.style.dropShadow {
+            // Create shadow container that wraps messageView
+            let shadowContainer = ShadowContainerView()
+            shadowContainer.translatesAutoresizingMaskIntoConstraints = false
+            shadowContainer.clipsToBounds = false // Allow shadows to extend beyond bounds
+            shadowContainer.backgroundColor = UIColor.clear // Required for shadow rendering
+            
+            // Add shadow to container
+            shadowContainer.layer.shadowColor = UIColor.black.cgColor
+            shadowContainer.layer.shadowOffset = CGSize(width: 10, height: 15)
+            shadowContainer.layer.shadowRadius = 20
+            shadowContainer.layer.shadowOpacity = 0.33
+            shadowContainer.layer.masksToBounds = false
+            shadowContainer.layer.shouldRasterize = false
+            
+            // Add messageView to shadow container
+            shadowContainer.addSubview(messageView)
+            messageView.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                messageView.topAnchor.constraint(equalTo: shadowContainer.topAnchor),
+                messageView.leadingAnchor.constraint(equalTo: shadowContainer.leadingAnchor),
+                messageView.trailingAnchor.constraint(equalTo: shadowContainer.trailingAnchor),
+                messageView.bottomAnchor.constraint(equalTo: shadowContainer.bottomAnchor)
+            ])
+            
+            finalView = shadowContainer
+        } else {
+            finalView = messageView
+        }
+        
+        currentMessageView = finalView
         
         // Add close button if enabled
         if message.style.closeIcon {
@@ -90,13 +135,13 @@ public class InAppMessageDisplayer {
             setupOverlay(in: viewController)
         }
         
-        // Add message view to view controller
-        viewController.view.addSubview(messageView)
+        // Add final view (either messageView or shadowContainer) to view controller
+        viewController.view.addSubview(finalView)
         
         // Apply zIndex from style
-        messageView.layer.zPosition = CGFloat(message.style.zIndex)
+        finalView.layer.zPosition = CGFloat(message.style.zIndex)
         
-        setupTemplateConstraints(messageView, in: viewController, templateType: templateType)
+        setupTemplateConstraints(finalView, in: viewController, templateType: templateType)
         
         // Setup action button targets
         setupActionTargets(in: messageView)
@@ -107,7 +152,7 @@ public class InAppMessageDisplayer {
             messageView.alpha = 0
             messageView.transform = CGAffineTransform(scaleX: 0.9, y: 0.9)
             
-            UIView.animate(withDuration: 0.3, delay: 0, options: .curveEaseOut) {
+            UIView.animate(withDuration: 0.7, delay: 0, options: .curveEaseOut) {
                 messageView.alpha = 1
                 messageView.transform = .identity
                 self.overlayView?.alpha = 1
