@@ -91,6 +91,7 @@ public struct MessageAudience: Codable {
     public let device: [String]
     public let userAgent: [String]
     public let osType: [String]
+    public let platform: String // "ALL", "WEB", "MOBILE"
 }
 
 public struct MessageScheduleSettings: Codable {
@@ -150,6 +151,13 @@ public enum ActionType: String, CaseIterable, Codable {
     case custom = "CUSTOM"
 }
 
+// Reference: Android PlatformType.kt
+public enum PlatformType: String, CaseIterable, Codable {
+    case all = "ALL"
+    case web = "WEB"
+    case mobile = "MOBILE"
+}
+
 // MARK: - Event Models
 public struct InAppEvent: Codable {
     public let eventType: String
@@ -196,56 +204,18 @@ extension InAppMessage {
         return TriggerType(rawValue: settings.triggerType) == trigger
     }
     
+    /// Check if message matches the current platform (iOS = MOBILE)
+    /// Reference: Android platform checking logic
+    public func matchesPlatform() -> Bool {
+        guard let platformType = PlatformType(rawValue: audience.platform) else {
+            return false
+        }
+        // iOS is considered MOBILE platform
+        return platformType == .mobile || platformType == .all
+    }
+    
     /// Get actions of specific type
     public func actions(ofType actionType: ActionType) -> [InAppMessageAction] {
         return actions.filter { ActionType(rawValue: $0.actionType) == actionType }
-    }
-}
-
-extension UserAudienceType {
-    /// Human-readable description
-    public var description: String {
-        switch self {
-        case .all:
-            return "All Users"
-        case .subscriber:
-            return "Subscribers"
-        case .nonSubscriber:
-            return "Non-Subscribers"
-        case .notificationsBlocked:
-            return "Notifications Blocked"
-        }
-    }
-}
-
-extension TriggerType {
-    /// Human-readable description
-    public var description: String {
-        switch self {
-        case .enter:
-            return "Page Entry"
-        case .custom:
-            return "Custom Event"
-        case .scroll:
-            return "Scroll Depth"
-        case .exitIntent:
-            return "Exit Intent"
-        }
-    }
-}
-
-extension ActionType {
-    /// Human-readable description
-    public var description: String {
-        switch self {
-        case .redirect:
-            return "Redirect"
-        case .subscribe:
-            return "Subscribe"
-        case .close:
-            return "Close"
-        case .custom:
-            return "Custom"
-        }
     }
 }

@@ -133,6 +133,13 @@ public class InAppMessageManager {
             }
             InAppLogger.shared.debug("✅ Message \(message.id) matches audience")
             
+            // Check platform targeting - iOS is considered MOBILE platform
+            guard message.matchesPlatform() else {
+                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match platform (platform: \(message.audience.platform))")
+                return false
+            }
+            InAppLogger.shared.debug("✅ Message \(message.id) matches platform")
+            
             // Check display history for "show again" logic
             if message.settings.showAgain == "never" && displayHistory.contains(message.id) {
                 InAppLogger.shared.debug("❌ Message \(message.id) already shown and set to never show again")
