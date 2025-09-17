@@ -251,7 +251,7 @@ public class InAppMessageDisplayer {
         case .desktop:
             Template2DesktopView.setupConstraints(messageView, in: viewController, placement: message.layout.placement, marginString: message.layout.margin)
         case .horizontal:
-            Template3HorizontalView.setupConstraints(messageView, in: viewController)
+            Template3HorizontalView.setupConstraints(messageView, in: viewController, placement: message.layout.placement, marginString: message.layout.margin)
         }
     }
     

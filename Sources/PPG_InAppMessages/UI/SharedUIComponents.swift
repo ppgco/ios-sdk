@@ -43,9 +43,9 @@ public class SharedUIComponents {
         // Apply borderRadius with CACornerMask support for individual corners (iOS 11+)
         UIStyleParser.applyBorderRadius(to: button, radiusString: action.borderRadius)
         
-        // Set initial system font
+        // Set initial system font with 1.3x multiplier
         let weight = UIStyleParser.parseFontWeight(action.fontWeight)
-        let fontSize = CGFloat(action.fontSize)
+        let fontSize = CGFloat(action.fontSize) * 1.3
         
         // Apply style if specified
         let styleString = action.style.lowercased() ?? "normal"
@@ -77,7 +77,7 @@ public class SharedUIComponents {
             let styleString = action.style.lowercased() ?? "normal"
             let customFont = FontManager.shared.loadFont(
                 family: fontFamily,
-                size: CGFloat(action.fontSize),
+                size: fontSize,
                 weight: action.fontWeight,
                 style: styleString
             )
@@ -147,9 +147,9 @@ public class SharedUIComponents {
         let label = UILabel()
         label.text = title.text
         
-        // Set initial system font
+        // Set initial system font with 1.3x multiplier
         let weight = UIStyleParser.parseFontWeight(title.fontWeight)
-        let fontSize = CGFloat(title.fontSize)
+        let fontSize = CGFloat(title.fontSize) * 1.3
         
         // Debug font weight
         InAppLogger.shared.info("Title font weight: \(title.fontWeight) -> \(weight.rawValue) (\(weight))")
@@ -238,8 +238,18 @@ public class SharedUIComponents {
         InAppLogger.shared.info("Title alignment: '\(title.alignment)' -> '\(alignment)'")
         
         if alignment == "justify" {
-            // For justified text, always use attributed string with paragraph style
-            let attributedText = NSMutableAttributedString(string: title.text)
+            // For justified text, preserve existing attributed text if it exists (for underline, etc.)
+            let attributedText: NSMutableAttributedString
+            if let existingAttributedText = label.attributedText {
+                // Use existing attributed text to preserve underline and other attributes
+                attributedText = NSMutableAttributedString(attributedString: existingAttributedText)
+            } else {
+                // Create new attributed text if none exists
+                attributedText = NSMutableAttributedString(string: title.text)
+                attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
+                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: title.color), range: NSRange(location: 0, length: attributedText.length))
+            }
+            
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .justified
             paragraphStyle.lineBreakMode = .byWordWrapping
@@ -247,8 +257,6 @@ public class SharedUIComponents {
             
             let fullRange = NSRange(location: 0, length: attributedText.length)
             attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
-            attributedText.addAttribute(.font, value: label.font!, range: fullRange)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: title.color), range: fullRange)
             
             label.attributedText = attributedText
             label.textAlignment = .justified  // Also set the label alignment as backup
@@ -268,9 +276,9 @@ public class SharedUIComponents {
         let label = UILabel()
         label.text = description.text
         
-        // Set initial system font
+        // Set initial system font with 1.3x multiplier
         let weight = UIStyleParser.parseFontWeight(description.fontWeight)
-        let fontSize = CGFloat(description.fontSize)
+        let fontSize = CGFloat(description.fontSize) * 1.3
         
         // Debug font weight
         InAppLogger.shared.info("Description font weight: \(description.fontWeight) -> \(weight.rawValue) (\(weight))")
@@ -309,7 +317,7 @@ public class SharedUIComponents {
             let styleString = description.style.lowercased() ?? "normal"
             let customFont = FontManager.shared.loadFont(
                 family: fontFamily,
-                size: CGFloat(description.fontSize),
+                size: fontSize,
                 weight: description.fontWeight,
                 style: styleString
             )
@@ -358,8 +366,18 @@ public class SharedUIComponents {
         InAppLogger.shared.info("Description alignment: '\(description.alignment)' -> '\(alignment)'")
         
         if alignment == "justify" {
-            // For justified text, always use attributed string with paragraph style
-            let attributedText = NSMutableAttributedString(string: description.text)
+            // For justified text, preserve existing attributed text if it exists (for underline, etc.)
+            let attributedText: NSMutableAttributedString
+            if let existingAttributedText = label.attributedText {
+                // Use existing attributed text to preserve underline and other attributes
+                attributedText = NSMutableAttributedString(attributedString: existingAttributedText)
+            } else {
+                // Create new attributed text if none exists
+                attributedText = NSMutableAttributedString(string: description.text)
+                attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
+                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: description.color), range: NSRange(location: 0, length: attributedText.length))
+            }
+            
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .justified
             paragraphStyle.lineBreakMode = .byWordWrapping
@@ -367,8 +385,6 @@ public class SharedUIComponents {
             
             let fullRange = NSRange(location: 0, length: attributedText.length)
             attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
-            attributedText.addAttribute(.font, value: label.font!, range: fullRange)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: description.color), range: fullRange)
             
             label.attributedText = attributedText
             label.textAlignment = .justified  // Also set the label alignment as backup

@@ -22,36 +22,73 @@ public class Template3HorizontalView {
         }
         containerView.clipsToBounds = true
         
-        // Add drop shadow if enabled
-        if message.style.dropShadow {
-            addDropShadow(to: containerView)
-        }
-        
-        // Main horizontal stack
+        // Main horizontal stack - 68px image / flexible content / 35% actions
         let mainStack = UIStackView()
         mainStack.axis = .horizontal
-        mainStack.spacing = CGFloat(message.layout.spaceBetweenImageAndBody)
-        mainStack.alignment = .fill
+        mainStack.spacing = CGFloat(message.layout.spaceBetweenImageAndBody)  // Only between image and text
+        mainStack.alignment = .top  // Align to top instead of fill for better text layout
         mainStack.distribution = .fill
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Add image section (left side - 40% width)
-        if let imageData = message.image, !imageData.url.isEmpty, !imageData.hideOnMobile {
-            let imageView = SharedUIComponents.createImageView(for: imageData.url)
-            mainStack.addArrangedSubview(imageView)
+        // Create intermediate container for text and actions with spaceBetweenContentAndActions
+        let contentActionsStack = UIStackView()
+        contentActionsStack.axis = .horizontal
+        contentActionsStack.spacing = CGFloat(message.layout.spaceBetweenContentAndActions)  // Between text and actions
+        contentActionsStack.alignment = .center
+        contentActionsStack.distribution = .fill
+        contentActionsStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Check if image should be shown
+        let shouldShowImage = message.image != nil && !message.image!.url.isEmpty && !message.image!.hideOnMobile
+        
+        if shouldShowImage {
+            // Left section - Image (20% width)
+            let mainPadding = UIStyleParser.parsePadding(message.layout.padding)
+            let imageSection = createImageSection(for: message.image!, padding: mainPadding)
+            mainStack.addArrangedSubview(imageSection)
             
-            // Set image width to 40% of container
-            imageView.widthAnchor.constraint(equalTo: mainStack.widthAnchor, multiplier: 0.4).isActive = true
+            // Set image width to account for padding: 60px image + padding.left + 8px margin
+            let imageWidth = 60 + mainPadding.left + 8
+            imageSection.widthAnchor.constraint(equalToConstant: imageWidth).isActive = true
         }
         
-        // Add content section (right side - 60% width)
-        let contentSection = createContentSection(for: message)
-        mainStack.addArrangedSubview(contentSection)
+        // Middle section - Title and Description 
+        let textSection = createTextSection(for: message)
+        contentActionsStack.addArrangedSubview(textSection)
+        
+        // Set text section to be flexible
+        textSection.setContentCompressionResistancePriority(UILayoutPriority(750), for: .horizontal)
+        textSection.setContentCompressionResistancePriority(.required, for: .vertical)
+        textSection.setContentHuggingPriority(.defaultLow, for: .vertical)
+        
+        // Right section - Actions (35% width)
+        var actionsSection: UIView? = nil
+        if !message.actions.isEmpty {
+            actionsSection = createActionsSection(for: message)
+            contentActionsStack.addArrangedSubview(actionsSection!)
+            
+            // Allow actions section to expand vertically as needed
+            actionsSection!.setContentCompressionResistancePriority(.defaultHigh, for: .vertical)
+            actionsSection!.setContentHuggingPriority(.defaultLow, for: .vertical)
+        }
+        
+        // Add contentActionsStack to mainStack
+        mainStack.addArrangedSubview(contentActionsStack)
         
         containerView.addSubview(mainStack)
         
-        // Apply padding
-        let padding = UIStyleParser.parsePadding(message.layout.paddingBody)
+        // Apply main container padding (layout.padding) - respect 0px values
+        // Add borderWidth to padding when border is enabled to prevent content overlap
+        var padding = UIStyleParser.parsePadding(message.layout.padding)
+        if message.style.border {
+            let borderWidth = CGFloat(message.style.borderWidth)
+            padding = UIEdgeInsets(
+                top: padding.top + borderWidth,
+                left: padding.left + borderWidth,
+                bottom: padding.bottom + borderWidth,
+                right: padding.right + borderWidth
+            )
+        }
         
         NSLayoutConstraint.activate([
             mainStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding.top),
@@ -60,12 +97,20 @@ public class Template3HorizontalView {
             mainStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -padding.bottom)
         ])
         
+        // Set actions section width after view hierarchy is established
+        if let actionsSection = actionsSection {
+            let actionsWidthConstraint = actionsSection.widthAnchor.constraint(equalTo: containerView.widthAnchor, multiplier: 0.35)
+            actionsWidthConstraint.priority = UILayoutPriority(999)
+            actionsWidthConstraint.isActive = true
+        }
+        
         return containerView
     }
     
-    /// Create image section (left side)
-    private static func createImageSection(for image: MessageImage) -> UIView {
+    /// Create image section (left side - 20% width, small square in upper part)
+    private static func createImageSection(for image: MessageImage, padding: UIEdgeInsets = .zero) -> UIView {
         let imageContainer = UIView()
+        imageContainer.translatesAutoresizingMaskIntoConstraints = false
         
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
@@ -77,116 +122,141 @@ public class Template3HorizontalView {
         
         imageContainer.addSubview(imageView)
         
+        // Image as small square (60x60) positioned respecting padding
+        let imageTopPadding = padding.top > 0 ? padding.top : 0  // Use padding or 0 for edge alignment
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: imageContainer.trailingAnchor),
-            imageView.bottomAnchor.constraint(equalTo: imageContainer.bottomAnchor),
-            
-            // Minimum height for image
-            imageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 150)
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: imageTopPadding),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor, constant: padding.left),
+            imageView.widthAnchor.constraint(equalToConstant: 60),
+            imageView.heightAnchor.constraint(equalToConstant: 60)
         ])
         
         return imageContainer
     }
     
-    /// Create content section (right side)
-    private static func createContentSection(for message: InAppMessage) -> UIView {
-        let contentView = UIView()
+    /// Create text section (middle - 40% width, title 50% + description 50%)
+    private static func createTextSection(for message: InAppMessage) -> UIView {
+        let textView = UIView()
         
-        let contentStack = UIStackView()
-        contentStack.axis = .vertical
-        contentStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
-        contentStack.alignment = .fill
-        contentStack.distribution = .fill
-        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        let textStack = UIStackView()
+        textStack.axis = .vertical
+        textStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
+        textStack.alignment = .fill
+        textStack.distribution = .fill  // Allow flexible height based on content
+        textStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Add title with font family
+        // Add title with font family (flexible height)
         if let title = message.title {
             let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
-            contentStack.addArrangedSubview(titleLabel)
+            titleLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+            titleLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
+            
+            textStack.addArrangedSubview(titleLabel)
         }
         
-        // Add description with font family
+        // Add description with font family (flexible height)
         if let description = message.description {
             let descriptionLabel = SharedUIComponents.createDescriptionLabel(for: description, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
-            contentStack.addArrangedSubview(descriptionLabel)
-        }
-        
-        // Add spacer to push actions to bottom
-        let spacer = UIView()
-        spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
-        contentStack.addArrangedSubview(spacer)
-        
-        // Add actions at bottom
-        if !message.actions.isEmpty {
-            let spacerBeforeActions = UIView()
-            spacerBeforeActions.heightAnchor.constraint(equalToConstant: CGFloat(message.layout.spaceBetweenContentAndActions)).isActive = true
-            contentStack.addArrangedSubview(spacerBeforeActions)
+            descriptionLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+            descriptionLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
             
-            let actionsView = SharedUIComponents.createActionsView(for: message)
-            contentStack.addArrangedSubview(actionsView)
+            textStack.addArrangedSubview(descriptionLabel)
         }
         
-        contentView.addSubview(contentStack)
+        textView.addSubview(textStack)
         
-        // Apply padding from layout
-        let paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
+        // Apply paddingBody to the text container (title + description content)
+        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
+        // Set proper priorities to ensure text content is never cut off
+        textStack.setContentCompressionResistancePriority(.required, for: .vertical)
+        textStack.setContentHuggingPriority(.defaultHigh, for: .vertical)
         
         NSLayoutConstraint.activate([
-            contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingValues.top),
-            contentStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: paddingValues.left),
-            contentStack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -paddingValues.right),
-            contentStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -paddingValues.bottom)
+            textStack.topAnchor.constraint(equalTo: textView.topAnchor, constant: paddingBody.top),
+            textStack.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: paddingBody.left),
+            textStack.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: 0),
+            textStack.bottomAnchor.constraint(equalTo: textView.bottomAnchor, constant: -paddingBody.bottom)
         ])
         
-        return contentView
+        return textView
     }
     
-    /// Add drop shadow to container
-    private static func addDropShadow(to view: UIView) {
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOffset = CGSize(width: 0, height: 4)
-        view.layer.shadowRadius = 8
-        view.layer.shadowOpacity = 0.15
-        view.layer.masksToBounds = false
+    /// Create actions section (right side - 45% width, buttons stacked vertically and centered)
+    private static func createActionsSection(for message: InAppMessage) -> UIView {
+        let actionsView = UIView()
+        
+        let actionsStack = UIStackView()
+        actionsStack.axis = .vertical  // Buttons stacked vertically
+        actionsStack.spacing = 8  // Space between buttons
+        actionsStack.alignment = .fill  // Fill width for equal button widths
+        actionsStack.distribution = .fill  // Simple fill - no spacers needed as parent centers us
+        actionsStack.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Collect buttons to ensure equal width
+        var buttons: [UIButton] = []
+        
+        // Add action buttons
+        for (index, action) in message.actions.enumerated() {
+            if action.enabled {
+                let button = SharedUIComponents.createActionButton(for: action, actionIndex: index, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
+                actionsStack.addArrangedSubview(button)
+                buttons.append(button)
+            }
+        }
+        
+        // Ensure all buttons have the same width
+        if buttons.count > 1 {
+            for i in 1..<buttons.count {
+                buttons[i].widthAnchor.constraint(equalTo: buttons[0].widthAnchor).isActive = true
+            }
+        }
+        
+        actionsView.addSubview(actionsStack)
+        
+        // Apply paddingBody to the actions container
+        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
+        NSLayoutConstraint.activate([
+            actionsStack.topAnchor.constraint(equalTo: actionsView.topAnchor, constant: paddingBody.top),
+            actionsStack.leadingAnchor.constraint(equalTo: actionsView.leadingAnchor, constant: 0),
+            actionsStack.trailingAnchor.constraint(equalTo: actionsView.trailingAnchor, constant: -paddingBody.right),
+            actionsStack.bottomAnchor.constraint(equalTo: actionsView.bottomAnchor, constant: -paddingBody.bottom)
+        ])
+        
+        return actionsView
     }
     
-    /// Setup constraints for horizontal modal with placement support
+    
+    /// Setup constraints for horizontal modal with full-width layout for Review template
     public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
-        let margin = UIStyleParser.parseFloat(marginString ?? "20px")
+        // Template3 ignores margin completely - always full-width for Review template
         
         let screenWidth = viewController.view.frame.width
         let screenHeight = viewController.view.frame.height
-        let maxWidth: CGFloat = 520
-        let preferredWidth = min(maxWidth, screenWidth - 40)
         
         // Determine position based on placement
         let placementUpper = (placement ?? "CENTER").uppercased()
         let isTop = placementUpper.hasPrefix("TOP")
         let isBottom = placementUpper.hasPrefix("BOTTOM")
-        // CENTER, LEFT, RIGHT all go to center
         
         var constraints: [NSLayoutConstraint] = [
-            // Always center horizontally
-            messageView.centerXAnchor.constraint(equalTo: viewController.view.centerXAnchor),
+            // Full-width constraints - always stretch edge to edge, ignore margin completely
+            messageView.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor),
+            messageView.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
+            messageView.widthAnchor.constraint(equalToConstant: screenWidth),
             
-            // Width constraints
-            messageView.widthAnchor.constraint(equalToConstant: preferredWidth),
-            messageView.leadingAnchor.constraint(greaterThanOrEqualTo: viewController.view.leadingAnchor, constant: margin),
-            messageView.trailingAnchor.constraint(lessThanOrEqualTo: viewController.view.trailingAnchor, constant: -margin),
-            
-            // Height constraints - content-driven but with limits
-            messageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 200),
-            messageView.heightAnchor.constraint(lessThanOrEqualToConstant: screenHeight * 0.8)
+            // Height constraints - content-driven, expand as needed for long text
+            messageView.heightAnchor.constraint(greaterThanOrEqualToConstant: 120),  // Minimum height
+            messageView.heightAnchor.constraint(lessThanOrEqualToConstant: screenHeight * 0.9)  // Allow more height for long text
         ]
         
-        // Add vertical positioning based on placement
+        // Add vertical positioning based on placement (no margin used)
         if isTop {
-            constraints.append(messageView.topAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.topAnchor, constant: margin))
+            constraints.append(messageView.topAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.topAnchor))
         } else if isBottom {
-            constraints.append(messageView.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor, constant: -margin))
+            constraints.append(messageView.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor))
         } else {
             // CENTER (default)
             constraints.append(messageView.centerYAnchor.constraint(equalTo: viewController.view.centerYAnchor))
@@ -195,6 +265,6 @@ public class Template3HorizontalView {
         NSLayoutConstraint.activate(constraints)
         
         let positionDesc = isTop ? "top" : (isBottom ? "bottom" : "centered")
-        InAppLogger.shared.info("↔️ Template 3 Horizontal Modal: \(preferredWidth)px wide, \(positionDesc), image left + content right")
+        InAppLogger.shared.info("↔️ Template 3 Horizontal Review: \(screenWidth)px full-width (ignoring margin), \(positionDesc), 68px image + flexible text + 35% actions")
     }
 }
