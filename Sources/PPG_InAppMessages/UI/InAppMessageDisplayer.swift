@@ -165,6 +165,9 @@ public class InAppMessageDisplayer {
         }
         
         InAppLogger.shared.info("\(tag): ✅ Message displayed successfully")
+        
+        // Dispatch show event
+        onMessageEvent("show", message, nil)
     }
     
     /// Dismiss message (public interface)
@@ -296,7 +299,7 @@ public class InAppMessageDisplayer {
     
     @objc private func closeButtonTapped() {
         guard let message = currentMessage else { return }
-        onMessageEvent("inapp.close", message, nil)
+        onMessageEvent("close", message, nil)
         dismissMessageSilently()
     }
     
@@ -309,22 +312,24 @@ public class InAppMessageDisplayer {
         if actionIndex < message.actions.count {
             let action = message.actions[actionIndex]
             
-            // Handle different action types
+            // Handle different action types - ALL button actions send "cta" event (like Android)
             if let actionType = ActionType(rawValue: action.actionType) {
+                onMessageEvent("cta", message, actionIndex)
+                
                 switch actionType {
                 case .redirect:
-                    onMessageEvent("inapp.cta", message, actionIndex)
                     if let urlString = action.url, let url = URL(string: urlString) {
                         UIApplication.shared.open(url)
                     }
                 case .close:
-                    onMessageEvent("inapp.close", message, actionIndex)
+                    // CLOSE button action - just dismiss (cta event already sent above)
+                    break
                 case .subscribe:
-                    onMessageEvent("inapp.subscribe", message, actionIndex)
                     handleSubscribeAction()
                     return // Don't dismiss yet - handleSubscribeAction will dismiss
                 case .custom:
-                    onMessageEvent("inapp.custom", message, actionIndex)
+                    // Custom action - just dismiss (cta event already sent above)
+                    break
                 }
             }
         }
@@ -359,7 +364,7 @@ public class InAppMessageDisplayer {
         isDismissing = true
         
         if sendCloseEvent {
-            onMessageEvent("inapp.close", message, nil)
+            onMessageEvent("close", message, nil)
         }
         
         UIView.animate(withDuration: 0.3, animations: {

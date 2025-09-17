@@ -148,7 +148,8 @@ import UIKit
                 case "cta":
                     // CRITICAL FIX: Button clicks should only send CTA events, not close events
                     if let index = ctaIndex {
-                        try await repository?.dispatchEvent("inapp.cta.\(index)", messageId: message.id)
+                        let oneBasedIndex = index + 1
+                        try await repository?.dispatchEvent("inapp.cta.\(oneBasedIndex)", messageId: message.id)
                     }
                 default:
                     InAppLogger.shared.error("Unknown event type: \(eventType)")

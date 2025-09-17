@@ -29,6 +29,9 @@ public class SharedUIComponents {
         button.widthAnchor.constraint(equalToConstant: buttonSize).isActive = true
         button.heightAnchor.constraint(equalToConstant: buttonSize).isActive = true
         
+        // CRITICAL FIX: Set tag to -1 to distinguish from action buttons (which have tag >= 0)
+        button.tag = -1
+        
         return button
     }
     

@@ -106,13 +106,12 @@ public class InAppMessageRepository {
         
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.setValue(apiKey, forHTTPHeaderField: "X-Token")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let eventPayload = [
-            "event_type": eventType,
-            "message_id": messageId,
-            "timestamp": ISO8601DateFormatter().string(from: Date())
+            "action": eventType,
+            "inApp": messageId,
         ]
         
         do {
