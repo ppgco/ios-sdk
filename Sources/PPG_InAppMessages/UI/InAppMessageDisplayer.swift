@@ -208,26 +208,23 @@ public class InAppMessageDisplayer {
                let imageSection = mainStack.arrangedSubviews.first {
                 NSLayoutConstraint.activate([
                     closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: 10),
-                    closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -10),
-                    closeButton.widthAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth)),
-                    closeButton.heightAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth))
+                    closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -10)
+                    // Size constraints already set in createCloseButton()
                 ])
             } else {
                 // Fallback to messageView if we can't find the image section
                 NSLayoutConstraint.activate([
                     closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: 10),
-                    closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10),
-                    closeButton.widthAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth)),
-                    closeButton.heightAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth))
+                    closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10)
+                    // Size constraints already set in createCloseButton()
                 ])
             }
         } else {
             // For other templates, position relative to messageView
             NSLayoutConstraint.activate([
                 closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: 10),
-                closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10),
-                closeButton.widthAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth)),
-                closeButton.heightAnchor.constraint(equalToConstant: CGFloat(style.closeIconWidth))
+                closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10)
+                // Size constraints already set in createCloseButton()
             ])
         }
     }

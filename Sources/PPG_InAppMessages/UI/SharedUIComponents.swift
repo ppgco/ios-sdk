@@ -134,8 +134,10 @@ public class SharedUIComponents {
         // Calculate exact height needed - use ceiling to avoid fractional pixels
         let exactHeight = ceil(textBounds.height + adjustedPadding.top + adjustedPadding.bottom + 16)
         
-        // Use exact height constraint instead of greaterThanOrEqual
-        button.heightAnchor.constraint(equalToConstant: exactHeight).isActive = true
+        // Use exact height constraint with high priority to avoid conflicts with UIKit's internal constraints
+        let heightConstraint = button.heightAnchor.constraint(equalToConstant: exactHeight)
+        heightConstraint.priority = UILayoutPriority(999) // High priority but not required - allows UIKit to override if needed
+        heightConstraint.isActive = true
         
         print("🔴 Button text: '\(action.text)' -> calculated height: \(exactHeight)");
         
