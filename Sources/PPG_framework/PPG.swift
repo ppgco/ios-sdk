@@ -32,6 +32,13 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         
         // Register default notification categories
         CategoryManager.addDefaultCategories()
+        
+        // Check current notification permissions on startup
+        SharedData.shared.checkAndUpdateNotificationPermissions()
+        
+        // Check if user is already subscribed (has device token saved)
+        let hasDeviceToken = !SharedData.shared.deviceToken.isEmpty
+        SharedData.shared.isSubscribed = hasDeviceToken
     }
 
     public static func registerForNotifications(
@@ -43,6 +50,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ]) { granted, error in
             if let error = error {
                 print("Init Notifications error: \(error)")
+                // Update subscription status - permission denied
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
                 handler(.error(error.localizedDescription))
                 return
             }
@@ -51,6 +60,10 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 application.registerForRemoteNotifications()
             }
             print("Init Notifications success")
+            
+            // Update subscription status based on permission granted
+            // Note: This doesn't guarantee subscription yet - wait for device token
+            SharedData.shared.checkAndUpdateNotificationPermissions()
 
             handler(.success)
         }
@@ -80,6 +93,11 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ApiService.shared.subscribeUser(token: key) { result in
             if case .success = result {
                 SharedData.shared.deviceToken = key
+                // Successfully subscribed - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: true)
+            } else {
+                // Failed to subscribe - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
             }
 
             handler(result)
@@ -96,6 +114,13 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
 
         ApiService.shared.subscribeUser(token: token) { result in
+            if case .success = result {
+                // Successfully re-subscribed - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: true)
+            } else {
+                // Failed to re-subscribe - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
+            }
             handler(result)
         }
     }
@@ -106,6 +131,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ApiService.shared.unsubscribeUser { result in
             if case .success = result {
                 SharedData.shared.deviceToken = ""
+                // Successfully unsubscribed - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
             }
 
             handler(result)

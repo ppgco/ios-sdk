@@ -140,18 +140,3 @@ public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
     @objc func requestSubscriptionObjC(viewController: UIViewController) -> NSNumber
 }
 
-// MARK: - UserDefaults Keys Extension
-extension UserDefaults {
-    /// Convenience methods for accessing PushPushGo SDK state
-    /// Reference: Android SharedPreferencesHelper
-    
-    var pushPushGoIsSubscribed: Bool {
-        get { bool(forKey: "_PushPushGoSDK_is_subscribed_") }
-        set { set(newValue, forKey: "_PushPushGoSDK_is_subscribed_") }
-    }
-    
-    var pushPushGoNotificationsBlocked: Bool {
-        get { bool(forKey: "_PushPushGoSDK_notifications_blocked_") }
-        set { set(newValue, forKey: "_PushPushGoSDK_notifications_blocked_") }
-    }
-}

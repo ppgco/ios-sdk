@@ -60,4 +60,50 @@ public class SharedData {
     }
 
     var center: UNUserNotificationCenter!
+    
+    // PPG_InAppMessages bridge section
+    // Push Notification Status Management
+    // Keys that match PushNotificationStatusProvider in PPG_InAppMessages
+    private static let isSubscribedKey = "_PushPushGoSDK_is_subscribed_"
+    private static let areNotificationsBlockedKey = "_PushPushGoSDK_notifications_blocked_"
+    
+    /// Tracks if user is currently subscribed to push notifications
+    var isSubscribed: Bool {
+        get {
+            // Use standard UserDefaults to match PushNotificationStatusProvider
+            return UserDefaults.standard.bool(forKey: Self.isSubscribedKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.isSubscribedKey)
+        }
+    }
+    
+    /// Tracks if notifications are blocked at system level
+    var areNotificationsBlocked: Bool {
+        get {
+            return UserDefaults.standard.bool(forKey: Self.areNotificationsBlockedKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: Self.areNotificationsBlockedKey)
+        }
+    }
+    
+    /// Update subscription status and check system permissions
+    func updateSubscriptionStatus(isSubscribed: Bool) {
+        self.isSubscribed = isSubscribed
+        
+        // Also check current system notification permissions
+        checkAndUpdateNotificationPermissions()
+    }
+    
+    /// Check system notification permissions and update blocked status
+    func checkAndUpdateNotificationPermissions() {
+        center.getNotificationSettings { [weak self] settings in
+            DispatchQueue.main.async {
+                // User has blocked notifications at system level
+                let isBlocked = (settings.authorizationStatus == .denied)
+                self?.areNotificationsBlocked = isBlocked
+            }
+        }
+    }
 }
