@@ -158,6 +158,25 @@ public enum PlatformType: String, CaseIterable, Codable {
     case mobile = "MOBILE"
 }
 
+// Device type targeting for audience filtering
+public enum DeviceType: String, CaseIterable, Codable {
+    case all = "ALL"
+    case mobile = "MOBILE"
+    case desktop = "DESKTOP"
+    case tablet = "TABLET"
+    case others = "OTHERS"
+}
+
+// OS type targeting for audience filtering
+public enum OSType: String, CaseIterable, Codable {
+    case all = "ALL"
+    case ios = "IOS"
+    case android = "ANDROID"
+    case windows = "WINDOWS"
+    case mac = "MACOS"
+    case others = "OTHERS"
+}
+
 // MARK: - Event Models
 public struct InAppEvent: Codable {
     public let eventType: String
@@ -212,6 +231,32 @@ extension InAppMessage {
         }
         // iOS is considered MOBILE platform
         return platformType == .mobile || platformType == .all
+    }
+    
+    /// Check if message matches the device type targeting
+    /// For iOS SDK: show only if device contains ALL or MOBILE
+    public func matchesDevice() -> Bool {
+        // Check if any device type in the array allows iOS (MOBILE or ALL)
+        return audience.device.contains { deviceString in
+            guard let deviceType = DeviceType(rawValue: deviceString) else {
+                return false
+            }
+            // iOS is considered MOBILE device
+            return deviceType == .mobile || deviceType == .all
+        }
+    }
+    
+    /// Check if message matches the OS type targeting
+    /// For iOS SDK: show only if osType contains ALL or IOS
+    public func matchesOSType() -> Bool {
+        // Check if any OS type in the array allows iOS
+        return audience.osType.contains { osString in
+            guard let osType = OSType(rawValue: osString) else {
+                return false
+            }
+            // Show for ALL or IOS specifically
+            return osType == .ios || osType == .all
+        }
     }
     
     /// Get actions of specific type

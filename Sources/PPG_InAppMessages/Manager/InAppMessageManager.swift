@@ -140,6 +140,20 @@ public class InAppMessageManager {
             }
             InAppLogger.shared.debug("✅ Message \(message.id) matches platform")
             
+            // Check device targeting - iOS should show for ALL or MOBILE devices
+            guard message.matchesDevice() else {
+                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match device targeting (device: \(message.audience.device))")
+                return false
+            }
+            InAppLogger.shared.debug("✅ Message \(message.id) matches device targeting")
+            
+            // Check OS type targeting - iOS should show for ALL or IOS
+            guard message.matchesOSType() else {
+                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match OS type targeting (osType: \(message.audience.osType))")
+                return false
+            }
+            InAppLogger.shared.debug("✅ Message \(message.id) matches OS type targeting")
+            
             // Check display history for "show again" logic
             if message.settings.showAgain == "never" && displayHistory.contains(message.id) {
                 InAppLogger.shared.debug("❌ Message \(message.id) already shown and set to never show again")
