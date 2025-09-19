@@ -6,8 +6,12 @@
 //  Copyright © 2020 Goodylabs. All rights reserved.
 //
 
+import Foundation
 import UIKit
 import UserNotifications
+
+// Global bridge instance - initialized when PPG is first used
+private let subscriptionBridge = PushPushGoSubscriptionBridgeManager()
 
 public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
@@ -25,6 +29,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     public static func initializeNotifications(
         projectId: String, apiToken: String, appGroupId: String
     ) {
+        // Initialize bridge for In-App Messages communication
+        _ = subscriptionBridge // Force initialization
         SharedData.shared.appGroupId = appGroupId
         SharedData.shared.projectId = projectId
         SharedData.shared.apiToken = apiToken

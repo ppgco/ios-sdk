@@ -87,49 +87,70 @@ public protocol PushNotificationSubscriber {
     func requestSubscription(viewController: UIViewController) async -> Bool
 }
 
-/// Default implementation that attempts to find the PushPushGoSubscriptionManager 
-/// in the push notifications SDK using runtime class discovery.
-/// 
-/// This provides automatic integration between the in-app messages library and 
-/// the push notifications SDK without creating direct compile-time dependencies.
+/// NotificationCenter-based implementation that communicates with Push SDK
+/// without direct dependencies. Uses notification pattern for loose coupling.
 /// 
 /// Reference: Android DefaultPushNotificationSubscriber
 public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
     
     private static let tag = "DefaultPushSubscriber"
-    private static let bridgeClassName = "PushPushGoSubscriptionBridgeManager"
     
     public init() {}
     
     public func requestSubscription(viewController: UIViewController) async -> Bool {
-        // Try to find the PushPushGoSubscriptionManager class using runtime discovery
-        // Reference: Android reflection-based bridge discovery
-        guard let bridgeClass = NSClassFromString(Self.bridgeClassName) as? NSObject.Type else {
-            InAppLogger.shared.error("\(Self.tag): \(Self.bridgeClassName) not found. Make sure the push notifications SDK is included")
-            return false
-        }
-        
-        do {
-            // Create instance of the bridge manager
-            let bridgeManager = bridgeClass.init()
+        return await withCheckedContinuation { continuation in
+            // Track if continuation has been resumed to prevent double resume
+            var hasResumed = false
+            let resumeLock = NSLock()
             
-            // Try to call requestSubscription method using string selector
-            // Note: In production, you might want to use a protocol instead of performSelector
-            let selectorName = "requestSubscriptionObjC:"
-            let selector = NSSelectorFromString(selectorName)
-            
-            if bridgeManager.responds(to: selector) {
-                let unmanagedResult = bridgeManager.perform(selector, with: viewController)
-                let result = unmanagedResult?.takeUnretainedValue() as? NSNumber
-                return result?.boolValue ?? false
-            } else {
-                InAppLogger.shared.error("\(Self.tag): requestSubscription method not found on bridge manager")
-                return false
+            // Create observer for response
+            var observer: NSObjectProtocol?
+            observer = NotificationCenter.default.addObserver(
+                forName: NSNotification.Name("PPGSubscriptionResult"),
+                object: nil,
+                queue: .main
+            ) { notification in
+                resumeLock.lock()
+                defer { resumeLock.unlock() }
+                
+                guard !hasResumed else { return }
+                hasResumed = true
+                
+                // Clean up observer
+                if let observer = observer {
+                    NotificationCenter.default.removeObserver(observer)
+                }
+                
+                // Get result from notification
+                let success = notification.userInfo?["success"] as? Bool ?? false
+                InAppLogger.shared.info("\(Self.tag): Received subscription result: \(success)")
+                continuation.resume(returning: success)
             }
             
-        } catch {
-            InAppLogger.shared.error("\(Self.tag): Error requesting subscription: \(error)")
-            return false
+            // Set timeout in case no response comes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                resumeLock.lock()
+                defer { resumeLock.unlock() }
+                
+                guard !hasResumed else { return }
+                hasResumed = true
+                
+                if let observer = observer {
+                    NotificationCenter.default.removeObserver(observer)
+                }
+                InAppLogger.shared.error("\(Self.tag): Subscription request timeout")
+                continuation.resume(returning: false)
+            }
+            
+            // Send subscription request via NotificationCenter
+            let userInfo: [String: Any] = ["viewController": viewController]
+            NotificationCenter.default.post(
+                name: NSNotification.Name("PPGSubscriptionRequest"),
+                object: nil,
+                userInfo: userInfo
+            )
+            
+            InAppLogger.shared.info("\(Self.tag): Subscription request sent via NotificationCenter")
         }
     }
 }

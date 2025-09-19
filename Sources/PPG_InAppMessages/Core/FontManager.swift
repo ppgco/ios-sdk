@@ -84,7 +84,6 @@ public class FontManager {
         }
         
         // Unknown font -> system fallback
-        InAppLogger.shared.info("⚠️ Unknown font '\(family)' -> system fallback")
         return UIFont.systemFont(ofSize: size)
     }
     
@@ -113,8 +112,7 @@ public class FontManager {
         if let fallbackFont = findFallbackFontInFamily(family: family, originalWeight: weight, style: style, size: size) {
             return fallbackFont
         }
-        
-        InAppLogger.shared.info("❌ Font '\(fontName)' not found -> system fallback")
+
         let uiWeight = mapWeightToUIFontWeight(weight)
         return UIFont.systemFont(ofSize: size, weight: uiWeight)
     }
@@ -138,7 +136,6 @@ public class FontManager {
             let fallbackFontName = "\(baseFamily)-\(adjustedVariant)\(isItalic ? "Italic" : "")"
             
             if let font = UIFont(name: fallbackFontName, size: size) {
-                InAppLogger.shared.info("🔄 Fallback: \(originalWeight) → \(weight) (\(fallbackFontName))")
                 return font
             }
         }
@@ -313,6 +310,22 @@ public class FontManager {
               let provider = CGDataProvider(data: fontData),
               let cgFont = CGFont(provider) else { return }
         
+        // Check if font is already registered to avoid system warnings
+        if let postScriptName = cgFont.postScriptName {
+            let postScriptString = postScriptName as String
+            
+            // Skip if already registered by us
+            if registeredFonts.contains(postScriptString) {
+                return
+            }
+            
+            // Skip if already available in system
+            if UIFont(name: postScriptString, size: 12) != nil {
+                registeredFonts.insert(postScriptString) // Mark as known
+                return
+            }
+        }
+        
         var error: Unmanaged<CFError>?
         let success = CTFontManagerRegisterGraphicsFont(cgFont, &error)
         
@@ -322,7 +335,8 @@ public class FontManager {
             let cfError = error.takeUnretainedValue()
             let code = CFErrorGetCode(cfError)
             
-            if code != 105 { // 105 = already registered (OK)
+            // Ignore "already registered" errors: 105 = already registered, 305 = font exists
+            if code != 105 && code != 305 {
                 InAppLogger.shared.info("⚠️ Font registration failed: \(CFErrorCopyDescription(cfError) ?? "" as CFString)")
             }
         }

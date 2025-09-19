@@ -71,6 +71,14 @@ import UIKit
         InAppLogger.shared.info("User ID set: \(userId)")
     }
     
+    /// Set handler for JS actions from in-app message buttons
+    /// This allows the app to handle custom code calls from action buttons
+    /// - Parameter handler: Function that takes JS call string and processes it
+    @objc public func setJsActionHandler(_ handler: @escaping (String) -> Void) {
+        messageManager?.setJsActionHandler(handler)
+        InAppLogger.shared.info("JS action handler set")
+    }
+    
     /// Handle view controller lifecycle - equivalent to Android onActivityResumed
     @objc public func onViewControllerWillAppear(_ viewController: UIViewController) {
         guard isInitialized else {

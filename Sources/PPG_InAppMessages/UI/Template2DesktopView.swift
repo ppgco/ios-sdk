@@ -149,9 +149,10 @@ public class Template2DesktopView {
         
         // Create buttons in reverse order
         var buttons: [UIButton] = []
-        for (_, action) in message.actions.enumerated().reversed() {
+        for (originalIndex, action) in message.actions.enumerated().reversed() {
             if action.enabled {
-                let button = SharedUIComponents.createActionButton(for: action, actionIndex: 0, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
+                // Use original index even though buttons are displayed in reverse order
+                let button = SharedUIComponents.createActionButton(for: action, actionIndex: originalIndex, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
                 button.translatesAutoresizingMaskIntoConstraints = false
                 
                 // Force button to calculate its proper size

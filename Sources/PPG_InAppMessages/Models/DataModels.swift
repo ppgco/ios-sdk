@@ -111,7 +111,7 @@ public struct MessageScheduleSettings: Codable {
 // Reference: Android InAppMessageAction.kt
 public struct InAppMessageAction: Codable {
     public let enabled: Bool
-    public let actionType: String // "REDIRECT", "SUBSCRIBE", "CLOSE", "CUSTOM"
+    public let actionType: String // "REDIRECT", "SUBSCRIBE", "CLOSE", "JS"
     public let url: String?
     public let target: String
     public let text: String
@@ -148,7 +148,7 @@ public enum ActionType: String, CaseIterable, Codable {
     case redirect = "REDIRECT"
     case subscribe = "SUBSCRIBE"
     case close = "CLOSE"
-    case custom = "CUSTOM"
+    case js = "JS"
 }
 
 // Reference: Android PlatformType.kt
