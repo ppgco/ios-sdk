@@ -138,7 +138,7 @@ public enum UserAudienceType: String, CaseIterable, Codable {
 // Reference: Android TriggerType.kt
 public enum TriggerType: String, CaseIterable, Codable {
     case enter = "ENTER"
-    case custom = "CUSTOM"
+    case custom = "CUSTOM_TRIGGER"
     case scroll = "SCROLL"
     case exitIntent = "EXIT_INTENT"
 }

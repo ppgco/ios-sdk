@@ -47,7 +47,8 @@ public class InAppMessageManager {
     /// - Parameters:
     ///   - messages: Array of messages from API
     ///   - viewController: Current view controller for display
-    public func processMessages(_ messages: [InAppMessage], viewController: UIViewController) async {
+    ///   - skipTriggerCheck: Skip trigger type validation (for custom triggers)
+    public func processMessages(_ messages: [InAppMessage], viewController: UIViewController, skipTriggerCheck: Bool = false) async {
         InAppLogger.shared.info("🔍 processMessages called with \(messages.count) messages")
         
         guard currentlyDisplayedMessage == nil else {
@@ -56,7 +57,7 @@ public class InAppMessageManager {
         }
         
         // Filter messages based on eligibility criteria
-        let eligibleMessages = await filterEligibleMessages(messages)
+        let eligibleMessages = await filterEligibleMessages(messages, skipTriggerCheck: skipTriggerCheck)
         
         // Sort by priority (1 = highest, 2 = second, etc., 0 = lowest)
         let sortedMessages = eligibleMessages.sorted { left, right in
@@ -72,26 +73,42 @@ public class InAppMessageManager {
         }
     }
     
-    /// Handle custom trigger events
-    /// Reference: Android handleCustomTrigger() method with improved custom trigger matching
+    /// Handle custom trigger events with key-value matching
+    /// Reference: Android handleCustomTrigger() method with key-value pair matching
     /// - Parameters:
-    ///   - eventName: Custom event name
+    ///   - key: Custom trigger key to match
+    ///   - value: Custom trigger value to match  
     ///   - viewController: Current view controller
-    public func handleCustomTrigger(_ eventName: String, viewController: UIViewController) async {
+    public func handleCustomTrigger(key: String, value: String, viewController: UIViewController) async {
+        InAppLogger.shared.info("🎯 Custom trigger called with key: '\(key)', value: '\(value)'")
+        
         do {
             let messages = try await repository.getMessages(userId: "")
+            InAppLogger.shared.info("📨 Found \(messages.count) total messages for custom trigger check")
+            
             let customTriggerMessages = messages.filter { message in
-                // Check if message has custom trigger type
-                guard message.matchesTrigger(.custom) else { return false }
+                InAppLogger.shared.debug("Checking message \(message.id) - triggerType: '\(message.settings.triggerType)'")
                 
-                // New logic: use customTriggerKey and customTriggerValue for matching
+                // Check if message has custom trigger type
+                guard message.matchesTrigger(.custom) else { 
+                    InAppLogger.shared.debug("❌ Message \(message.id) is not CUSTOM trigger type")
+                    return false 
+                }
+                
+                InAppLogger.shared.debug("✅ Message \(message.id) has CUSTOM trigger type")
+                
+                // Key-Value matching logic: both key AND value must match
                 if let customKey = message.settings.customTriggerKey,
                    let customValue = message.settings.customTriggerValue {
-                    // Match based on custom key-value pair
-                    return customKey == eventName || customValue == eventName
+                    InAppLogger.shared.debug("🔑 Message \(message.id) has customKey: '\(customKey)', customValue: '\(customValue)'")
+                    let keyMatches = customKey == key
+                    let valueMatches = customValue == value
+                    let bothMatch = keyMatches && valueMatches
+                    InAppLogger.shared.debug("Key match: \(keyMatches), Value match: \(valueMatches) → \(bothMatch ? "✅ FULL MATCH!" : "❌ No match")")
+                    return bothMatch
                 } else {
-                    // Fallback to old logic using display field
-                    return message.settings.display == eventName
+                    InAppLogger.shared.debug("❌ Message \(message.id) missing customTriggerKey or customTriggerValue")
+                    return false
                 }
             }
             
@@ -102,7 +119,13 @@ public class InAppMessageManager {
                 return leftPriority < rightPriority
             }
             
-            await processMessages(sortedMessages, viewController: viewController)
+            InAppLogger.shared.info("🎯 Found \(customTriggerMessages.count) matching custom trigger messages")
+            if !sortedMessages.isEmpty {
+                InAppLogger.shared.info("🚀 Processing custom trigger messages (priority sorted)")
+                await processMessages(sortedMessages, viewController: viewController, skipTriggerCheck: true)
+            } else {
+                InAppLogger.shared.info("ℹ️ No custom trigger messages match key: '\(key)', value: '\(value)'")
+            }
             
         } catch {
             InAppLogger.shared.error("Failed to handle custom trigger: \(error)")
@@ -128,8 +151,9 @@ public class InAppMessageManager {
     /// Filter messages based on eligibility criteria
     /// Reference: Android message filtering logic with CRITICAL FIXES
     /// - Parameter messages: Raw messages from API
+    /// - Parameter skipTriggerCheck: Skip trigger type validation (for custom triggers)
     /// - Returns: Filtered eligible messages
-    private func filterEligibleMessages(_ messages: [InAppMessage]) async -> [InAppMessage] {
+    private func filterEligibleMessages(_ messages: [InAppMessage], skipTriggerCheck: Bool = false) async -> [InAppMessage] {
         InAppLogger.shared.info("Filtering \(messages.count) messages")
         
         return messages.filter { message in
@@ -201,7 +225,12 @@ public class InAppMessageManager {
             InAppLogger.shared.debug("✅ Message \(message.id) passed display history check")
             
             // Check if message should be shown on current trigger
-            // For now, we'll focus on ENTER trigger type
+            if skipTriggerCheck {
+                InAppLogger.shared.debug("✅ Message \(message.id) trigger check skipped (custom trigger already validated)")
+                return true
+            }
+            
+            // For normal flow, focus on ENTER trigger type
             InAppLogger.shared.debug("Message \(message.id) trigger type: \(message.settings.triggerType)")
             if message.matchesTrigger(.enter) {
                 InAppLogger.shared.debug("✅ Message \(message.id) matches ENTER trigger")

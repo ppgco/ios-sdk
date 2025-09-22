@@ -107,8 +107,8 @@ public struct InAppIntegrationExamples {
             }
             
             @IBAction func customEventButtonTapped(_ sender: UIButton) {
-                // Trigger custom in-app message event
-                InAppMessagesSDK.shared.triggerCustomEvent("button_tap", viewController: self)
+                // Show messages on custom trigger with key-value matching
+                InAppMessagesSDK.shared.showMessagesOnTrigger(key: "event_type", value: "button_tap", viewController: self)
             }
         }
         """

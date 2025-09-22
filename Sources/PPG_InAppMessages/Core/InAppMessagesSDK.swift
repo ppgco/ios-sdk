@@ -168,11 +168,15 @@ import UIKit
         }
     }
     
-    /// Trigger custom event for message display
-    /// Reference: Android custom trigger handling
-    @objc public func triggerCustomEvent(_ eventName: String, viewController: UIViewController) {
+    /// Show messages on custom trigger with key-value matching
+    /// Reference: Android custom trigger handling with key-value pairs
+    /// - Parameters:
+    ///   - key: Custom trigger key to match
+    ///   - value: Custom trigger value to match
+    ///   - viewController: View controller to display message on
+    @objc public func showMessagesOnTrigger(key: String, value: String, viewController: UIViewController) {
         Task {
-            await messageManager?.handleCustomTrigger(eventName, viewController: viewController)
+            await messageManager?.handleCustomTrigger(key: key, value: value, viewController: viewController)
         }
     }
     
