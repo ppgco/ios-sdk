@@ -17,8 +17,8 @@ public class InAppMessageManager {
     // Current message state
     private var currentlyDisplayedMessage: InAppMessage?
     
-    // Display history for "show again" logic
-    private var displayHistory: Set<String> = []
+    // Display history for "show again" logic - now with timestamps
+    private var displayHistory: [String: TimeInterval] = [:]
     private let displayHistoryKey = "InAppMessagesDisplayHistory"
     
     // MARK: - Initialization
@@ -58,7 +58,14 @@ public class InAppMessageManager {
         // Filter messages based on eligibility criteria
         let eligibleMessages = await filterEligibleMessages(messages)
         
-        if let message = eligibleMessages.first {
+        // Sort by priority (1 = highest, 2 = second, etc., 0 = lowest)
+        let sortedMessages = eligibleMessages.sorted { left, right in
+            let leftPriority = left.settings.priority == 0 ? Int.max : left.settings.priority
+            let rightPriority = right.settings.priority == 0 ? Int.max : right.settings.priority
+            return leftPriority < rightPriority
+        }
+        
+        if let message = sortedMessages.first {
             await displayMessage(message, viewController: viewController)
         } else {
             InAppLogger.shared.info("No eligible messages to display")
@@ -102,11 +109,13 @@ public class InAppMessageManager {
         }
     }
     
-    /// Mark message as displayed to track history
+    /// Mark message as displayed to track history with timestamp
     /// - Parameter messageId: ID of the displayed message
     public func markMessageAsDisplayed(_ messageId: String) {
-        displayHistory.insert(messageId)
+        let currentTime = Date().timeIntervalSince1970
+        displayHistory[messageId] = currentTime
         saveDisplayHistory()
+        InAppLogger.shared.info("📝 Marked message \(messageId) as displayed at \(currentTime)")
     }
     
     /// Clear currently displayed message
@@ -124,6 +133,12 @@ public class InAppMessageManager {
         InAppLogger.shared.info("Filtering \(messages.count) messages")
         
         return messages.filter { message in
+            // Don't show message that's already being displayed
+            if let currentlyDisplayed = currentlyDisplayedMessage,
+               currentlyDisplayed.id == message.id {
+                InAppLogger.shared.debug("❌ Message \(message.id) is already being displayed")
+                return false
+            }
             InAppLogger.shared.debug("Processing message \(message.id)")
             
             // Check if message is enabled
@@ -162,9 +177,26 @@ public class InAppMessageManager {
             InAppLogger.shared.debug("✅ Message \(message.id) matches OS type targeting")
             
             // Check display history for "show again" logic
-            if message.settings.showAgain == "never" && displayHistory.contains(message.id) {
-                InAppLogger.shared.debug("❌ Message \(message.id) already shown and set to never show again")
-                return false
+            if let lastDisplayTime = displayHistory[message.id] {
+                let showAgain = message.settings.showAgain.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
+                
+                if showAgain == "NEVER" {
+                    InAppLogger.shared.debug("❌ Message \(message.id) already shown and set to never show again")
+                    return false
+                } else if showAgain == "AFTER_TIME" {
+                    let showAfterTimeSeconds = TimeInterval(message.settings.showAfterTime)
+                    let currentTime = Date().timeIntervalSince1970
+                    let timeSinceLastDisplay = currentTime - lastDisplayTime
+                    
+                    if timeSinceLastDisplay < showAfterTimeSeconds {
+                        let remainingTime = showAfterTimeSeconds - timeSinceLastDisplay
+                        InAppLogger.shared.debug("❌ Message \(message.id) shown \(Int(timeSinceLastDisplay))s ago, need to wait \(Int(remainingTime))s more")
+                        return false
+                    } else {
+                        InAppLogger.shared.debug("✅ Message \(message.id) can be shown again (waited \(Int(timeSinceLastDisplay))s)")
+                    }
+                }
+                // If showAgain is neither NEVER nor AFTER_TIME, allow showing (fallback behavior)
             }
             InAppLogger.shared.debug("✅ Message \(message.id) passed display history check")
             
@@ -196,12 +228,19 @@ public class InAppMessageManager {
             return
         }
         
+        // Apply showAfterDelay if specified
+        let delaySeconds = message.settings.showAfterDelay
+        if delaySeconds > 0 {
+            InAppLogger.shared.info("⏱️ Delaying message \(message.id) by \(delaySeconds) seconds")
+            try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
+        }
+        
         DispatchQueue.main.async {
             InAppLogger.shared.info("🚀 Showing message on main thread")
             displayer.showMessage(message, in: viewController)
         }
         
-        // Mark as displayed after attempting to show
+        // Mark as displayed with timestamp
         markMessageAsDisplayed(message.id)
     }
     
@@ -209,13 +248,16 @@ public class InAppMessageManager {
     
     /// Load display history from UserDefaults
     private func loadDisplayHistory() {
-        if let history = UserDefaults.standard.array(forKey: displayHistoryKey) as? [String] {
-            displayHistory = Set(history)
+        if let historyData = UserDefaults.standard.data(forKey: displayHistoryKey),
+           let history = try? JSONDecoder().decode([String: TimeInterval].self, from: historyData) {
+            displayHistory = history
         }
     }
     
     /// Save display history to UserDefaults
     private func saveDisplayHistory() {
-        UserDefaults.standard.set(Array(displayHistory), forKey: displayHistoryKey)
+        if let historyData = try? JSONEncoder().encode(displayHistory) {
+            UserDefaults.standard.set(historyData, forKey: displayHistoryKey)
+        }
     }
 }

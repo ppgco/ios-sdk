@@ -14,12 +14,14 @@ import UIKit
     private var isInitialized = false
     private var apiKey: String?
     private var projectId: String?
-    private var userId: String?
-    
-    // Core components - equivalent to Android components
+    private var repository: InAppMessageRepository?
     private var messageManager: InAppMessageManager?
     private var messageDisplayer: InAppMessageDisplayer?
-    private var repository: InAppMessageRepository?
+    private var userId: String = ""
+    
+    // Background timer for periodic message checking
+    private var backgroundTimer: Timer?
+    private weak var currentViewController: UIViewController?
     
     // Bridge to push SDK - equivalent to Android bridge pattern
     private var subscriptionHandler: PushNotificationSubscriber = DefaultPushNotificationSubscriber()
@@ -29,6 +31,36 @@ import UIKit
     
     private override init() {
         super.init()
+        setupAppLifecycleObservers()
+    }
+    
+    /// Setup app lifecycle observers for proper timer management
+    private func setupAppLifecycleObservers() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillEnterForeground),
+            name: UIApplication.willEnterForegroundNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidEnterBackground() {
+        InAppLogger.shared.info("🌙 App entered background - stopping background timer")
+        stopBackgroundTimer()
+    }
+    
+    @objc private func appWillEnterForeground() {
+        InAppLogger.shared.info("☀️ App entering foreground - resuming background timer")
+        if currentViewController != nil {
+            startBackgroundTimer()
+        }
     }
     
     // MARK: - Public API
@@ -86,6 +118,12 @@ import UIKit
             return
         }
         
+        // Store current view controller for background timer
+        currentViewController = viewController
+        
+        // Start background timer for periodic checking
+        startBackgroundTimer()
+        
         // Add delay to prevent collision with system permission dialogs
         // Reference: Android fix for permission dialog collision
         Task {
@@ -98,6 +136,10 @@ import UIKit
     @objc public func onViewControllerDidDisappear() {
         // Clean up any displayed messages if needed
         messageDisplayer?.dismissMessageSilently()
+        
+        // Stop background timer when view disappears
+        stopBackgroundTimer()
+        currentViewController = nil
     }
     
     /// Manually refresh and display eligible messages
@@ -138,9 +180,46 @@ import UIKit
     
     /// Handle message dismissal - equivalent to Android onMessageDismissed
     private func onMessageDismissed() {
-        // Refresh messages after dismissal
-        // Implementation depends on current view controller context
-        InAppLogger.shared.info("Message dismissed")
+        // Clear current message from manager to allow new messages
+        messageManager?.clearCurrentMessage()
+        InAppLogger.shared.info("✅ Message dismissed and cleared - waiting for background timer")
+        
+        // NOTE: Do NOT immediately refresh messages here
+        // Let only the background timer decide when to check for eligible messages
+        // This ensures proper showAfterTime behavior when app is running
+    }
+    
+    // MARK: - Background Timer
+    
+    /// Start background timer to check messages every minute
+    private func startBackgroundTimer() {
+        // Stop existing timer if any
+        stopBackgroundTimer()
+        
+        // Create timer that fires every 60 seconds
+        backgroundTimer = Timer.scheduledTimer(withTimeInterval: 60.0, repeats: true) { [weak self] _ in
+            guard let self = self,
+                  let viewController = self.currentViewController,
+                  self.isInitialized else { 
+                InAppLogger.shared.debug("⏰ Background timer: skipping check (not initialized or no VC)")
+                return 
+            }
+            
+            InAppLogger.shared.info("⏰ Background timer: checking for eligible messages")
+            
+            Task {
+                await self.refreshActiveMessages(viewController: viewController)
+            }
+        }
+        
+        InAppLogger.shared.info("⏰ Background timer started (60s interval)")
+    }
+    
+    /// Stop background timer
+    private func stopBackgroundTimer() {
+        backgroundTimer?.invalidate()
+        backgroundTimer = nil
+        InAppLogger.shared.info("⏰ Background timer stopped")
     }
     
     /// Handle message events - equivalent to Android onMessageEvent
@@ -154,7 +233,6 @@ import UIKit
                 case "close":
                     try await repository?.dispatchEvent("inapp.close", messageId: message.id)
                 case "cta":
-                    // CRITICAL FIX: Button clicks should only send CTA events, not close events
                     if let index = ctaIndex {
                         let oneBasedIndex = index + 1
                         try await repository?.dispatchEvent("inapp.cta.\(oneBasedIndex)", messageId: message.id)
