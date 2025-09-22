@@ -180,6 +180,22 @@ import UIKit
         }
     }
     
+    /// Show messages on custom trigger with automatic view controller discovery
+    /// Convenient method for SwiftUI and other contexts where ViewController is not readily available
+    /// - Parameters:
+    ///   - key: Custom trigger key to match
+    ///   - value: Custom trigger value to match
+    @objc public func showMessagesOnTrigger(key: String, value: String) {
+        Task {
+            guard let viewController = findCurrentViewController() else {
+                InAppLogger.shared.error("❌ Cannot find current view controller for custom trigger")
+                return
+            }
+            
+            await messageManager?.handleCustomTrigger(key: key, value: value, viewController: viewController)
+        }
+    }
+    
     // MARK: - Private Methods
     
     /// Handle message dismissal - equivalent to Android onMessageDismissed
@@ -248,5 +264,56 @@ import UIKit
                 InAppLogger.shared.error("Failed to dispatch event: \(error)")
             }
         }
+    }
+    
+    /// Find current view controller using multiple strategies
+    /// - Returns: Current view controller or nil if not found
+    private func findCurrentViewController() -> UIViewController? {
+        // Strategy 1: Use stored currentViewController if available
+        if let stored = currentViewController {
+            InAppLogger.shared.debug("Using stored currentViewController")
+            return stored
+        }
+        
+        // Strategy 2: Get from key window root view controller
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let keyWindow = windowScene.windows.first(where: { $0.isKeyWindow }),
+           let rootViewController = keyWindow.rootViewController {
+            
+            let topVC = findTopMostViewController(from: rootViewController)
+            InAppLogger.shared.debug("Found view controller from key window: \(type(of: topVC))")
+            return topVC
+        }
+        
+        // Strategy 3: Fallback to first window's root view controller
+        if let window = UIApplication.shared.windows.first,
+           let rootViewController = window.rootViewController {
+            
+            let topVC = findTopMostViewController(from: rootViewController)
+            InAppLogger.shared.debug("Found view controller from first window: \(type(of: topVC))")
+            return topVC
+        }
+        
+        InAppLogger.shared.error("❌ Could not find any view controller")
+        return nil
+    }
+    
+    /// Find the topmost presented view controller
+    /// - Parameter base: Base view controller to search from
+    /// - Returns: Topmost view controller
+    private func findTopMostViewController(from base: UIViewController) -> UIViewController {
+        if let presented = base.presentedViewController {
+            return findTopMostViewController(from: presented)
+        }
+        
+        if let navigation = base as? UINavigationController {
+            return findTopMostViewController(from: navigation.visibleViewController ?? navigation)
+        }
+        
+        if let tab = base as? UITabBarController {
+            return findTopMostViewController(from: tab.selectedViewController ?? tab)
+        }
+        
+        return base
     }
 }
