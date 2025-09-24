@@ -19,7 +19,10 @@ public class InAppMessageManager {
     
     // Display history for "show again" logic - now with timestamps
     private var displayHistory: [String: TimeInterval] = [:]
-    private let displayHistoryKey = "InAppMessagesDisplayHistory"
+    private let displayHistoryKey = "InAppMessageDisplayHistory"
+    
+    // Current route for route-based display filtering
+    private var currentRoute: String = ""
     
     // MARK: - Initialization
     public init(repository: InAppMessageRepository, displayer: InAppMessageDisplayer? = nil) {
@@ -146,6 +149,52 @@ public class InAppMessageManager {
         currentlyDisplayedMessage = nil
     }
     
+    /// Set current route for route-based display filtering
+    /// - Parameter route: Current route path
+    public func setCurrentRoute(_ route: String) {
+        currentRoute = route
+        InAppLogger.shared.debug("Manager: Current route set to '\(route)'")
+    }
+    
+    /// Public method to check if message should be displayed on specific route
+    /// Used by SDK to avoid code duplication
+    /// - Parameters:
+    ///   - message: Message to check
+    ///   - route: Route path to check against
+    /// - Returns: True if message should be displayed on the route
+    public func shouldDisplayMessageOnRoute(_ message: InAppMessage, route: String) -> Bool {
+        let display = message.settings.display
+        let displayOn = message.settings.displayOn
+        
+        InAppLogger.shared.debug("Checking message \(message.id) - display: '\(display)' for route: '\(route)'")
+        
+        // If display is "all", show on every route
+        if display.lowercased() == "all" {
+            InAppLogger.shared.debug("✅ Message \(message.id) set to display on ALL routes")
+            return true
+        }
+        
+        // If display is "selected", check displayOn array
+        if display.lowercased() == "selected" {
+            InAppLogger.shared.debug("🗺️ Message \(message.id) set to display on SELECTED routes, checking \(displayOn.count) route configs")
+            
+            for routeConfig in displayOn {
+                InAppLogger.shared.debug("  Route config: path='\(routeConfig.path)', display=\(routeConfig.display)")
+                
+                if routeConfig.path == route && routeConfig.display {
+                    InAppLogger.shared.debug("✅ Message \(message.id) MATCHES route '\(route)' with display=true")
+                    return true
+                }
+            }
+            
+            InAppLogger.shared.debug("❌ Message \(message.id) no matching route config for route '\(route)'")
+            return false
+        }
+        
+        InAppLogger.shared.debug("❌ Message \(message.id) unknown display setting: '\(display)' - allowing by default")
+        return true // Default behavior for unknown display settings
+    }
+    
     // MARK: - Private Methods
     
     /// Filter messages based on eligibility criteria
@@ -223,6 +272,13 @@ public class InAppMessageManager {
                 // If showAgain is neither NEVER nor AFTER_TIME, allow showing (fallback behavior)
             }
             InAppLogger.shared.debug("✅ Message \(message.id) passed display history check")
+            
+            let shouldDisplayOnCurrentRoute = shouldDisplayMessageOnRoute(message, route: currentRoute)
+            if !shouldDisplayOnCurrentRoute {
+                InAppLogger.shared.debug("❌ Message \(message.id) not allowed on current route")
+                return false
+            }
+            InAppLogger.shared.debug("✅ Message \(message.id) passed route-based display check")
             
             // Check if message should be shown on current trigger
             if skipTriggerCheck {

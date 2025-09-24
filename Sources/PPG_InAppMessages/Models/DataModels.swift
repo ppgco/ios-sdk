@@ -94,12 +94,19 @@ public struct MessageAudience: Codable {
     public let platform: String // "ALL", "WEB", "MOBILE"
 }
 
+// MARK: - Route Display Settings
+// Reference: Backend display routing configuration
+public struct RouteDisplayConfig: Codable {
+    public let display: Bool
+    public let path: String
+}
+
 public struct MessageScheduleSettings: Codable {
     public let triggerType: String // "ENTER", "CUSTOM", "SCROLL", "EXIT_INTENT"
     public let scrollDepth: Int
     public let showAfterDelay: Int
     public let display: String
-    public let displayOn: [String]
+    public let displayOn: [RouteDisplayConfig]
     public let showAgain: String
     public let showAfterTime: Int
     public let priority: Int

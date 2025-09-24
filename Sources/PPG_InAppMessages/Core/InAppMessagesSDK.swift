@@ -23,6 +23,9 @@ import UIKit
     private var backgroundTimer: Timer?
     private weak var currentViewController: UIViewController?
     
+    // Route tracking for automatic message display
+    private var currentRoute: String = ""
+    
     // Bridge to push SDK - equivalent to Android bridge pattern
     private var subscriptionHandler: PushNotificationSubscriber = DefaultPushNotificationSubscriber()
     
@@ -121,13 +124,15 @@ import UIKit
         // Store current view controller for background timer
         currentViewController = viewController
         
+        // Update manager's current route (if we have one set)
+        if !currentRoute.isEmpty {
+            messageManager?.setCurrentRoute(currentRoute)
+        }
+        
         // Start background timer for periodic checking
         startBackgroundTimer()
         
-        // Add delay to prevent collision with system permission dialogs
-        // Reference: Android fix for permission dialog collision
         Task {
-            try await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
             await refreshActiveMessages(viewController: viewController)
         }
     }
@@ -193,6 +198,31 @@ import UIKit
             }
             
             await messageManager?.handleCustomTrigger(key: key, value: value, viewController: viewController)
+        }
+    }
+    
+    /// Notify SDK about route change and check for route-specific messages
+    /// This updates the current route and checks for messages if view controller is available
+    /// - Parameters:
+    ///   - route: New route path (e.g., "home", "product-detail", "checkout")
+    @objc public func onRouteChanged(_ route: String) {
+        let previousRoute = currentRoute
+        currentRoute = route
+        
+        // CRITICAL: Update manager's current route for filtering
+        messageManager?.setCurrentRoute(route)
+        
+        InAppLogger.shared.info("🗺️ Route changed: '\(previousRoute)' → '\(route)'")
+        
+        // Only refresh messages if we have a current view controller
+        // This avoids duplication with onViewControllerWillAppear() during app startup
+        if let viewController = currentViewController {
+            InAppLogger.shared.info("🗺️ Checking messages for new route '\(route)'")
+            Task {
+                await refreshActiveMessages(viewController: viewController)
+            }
+        } else {
+            InAppLogger.shared.info("🗺️ No current view controller - messages will be checked on next view appear")
         }
     }
     
