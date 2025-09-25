@@ -226,6 +226,23 @@ import UIKit
         }
     }
     
+    /// Clear message cache (useful for testing or troubleshooting)
+    /// This will force fresh data fetch on next API call
+    @objc public func clearMessageCache() {
+        guard let repository = repository else {
+            InAppLogger.shared.info("Repository not initialized - cannot clear cache")
+            return
+        }
+        
+        repository.clearCache()
+        InAppLogger.shared.info("📦 Message cache cleared successfully")
+    }
+    
+    /// Get cache status for debugging (internal use)
+    internal func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool)? {
+        return repository?.getCacheStatus()
+    }
+    
     // MARK: - Private Methods
     
     /// Handle message dismissal - equivalent to Android onMessageDismissed

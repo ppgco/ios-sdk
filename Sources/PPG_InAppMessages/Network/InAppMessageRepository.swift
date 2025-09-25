@@ -14,6 +14,7 @@ public class InAppMessageRepository {
     private let isProduction: Bool
     
     private let session: URLSession
+    private let cache: InAppMessageCache
     
     // API endpoints - reference Android API configuration
     private var baseURL: String {
@@ -21,20 +22,26 @@ public class InAppMessageRepository {
     }
     
     // MARK: - Initialization
-    public init(apiKey: String, projectId: String, isProduction: Bool = true) {
+    public init(apiKey: String, projectId: String, isProduction: Bool = true, cache: InAppMessageCache? = nil) {
         self.apiKey = apiKey
         self.projectId = projectId
         self.isProduction = isProduction
         self.session = URLSession.shared
+        self.cache = cache ?? InAppMessageCache()
     }
     
     // MARK: - Public Methods
     
-    /// Fetch active in-app messages from API
-    /// Reference: Android getMessages() method
+    /// Fetch active in-app messages from API with ETag caching
+    /// Reference: Android getMessages() method with ETag optimization
     /// - Parameter userId: User ID for message targeting
     /// - Returns: Array of InAppMessage objects
     public func getMessages(userId: String) async throws -> [InAppMessage] {
+        // Get stored ETag for cache validation
+        let storedETag = cache.getStoredETag()
+        
+        InAppLogger.shared.info("Fetching messages with ETag: \(storedETag ?? "nil")")
+        
         let baseEndpoint = "\(baseURL)/wi/v1/ios/projects/\(projectId)/popups"
         
         // Add required query parameters
@@ -50,14 +57,16 @@ public class InAppMessageRepository {
             throw RepositoryError.invalidURL
         }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData)
         request.httpMethod = "GET"
         request.setValue(apiKey, forHTTPHeaderField: "X-Token")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        // Optional caching header (can be added later if needed)
-        // request.setValue(ifNoneMatch, forHTTPHeaderField: "If-None-Match")
         
-        InAppLogger.shared.info("Fetching messages for user: \(userId)")
+        // Add ETag header for cache validation
+        if let storedETag = storedETag {
+            request.setValue(storedETag, forHTTPHeaderField: "If-None-Match")
+            InAppLogger.shared.info("📦 SENDING If-None-Match: '\(storedETag)'")
+        }
         
         do {
             // iOS 13+ compatible networking
@@ -76,19 +85,60 @@ public class InAppMessageRepository {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw RepositoryError.invalidResponse
             }
-            
-            guard httpResponse.statusCode == 200 else {
-                throw RepositoryError.httpError(httpResponse.statusCode)
+
+            // Handle different response codes based on ETag
+            switch httpResponse.statusCode {
+            case 200:
+                // Fresh data received
+                let messagesResponse = try JSONDecoder().decode(MessagesResponse.self, from: data)
+                let messages = messagesResponse.data
+                
+                // Save ETag and cache the payload
+                if let newETag = httpResponse.allHeaderFields["Etag"] as? String {
+                    InAppLogger.shared.info("📦 RECEIVED ETag: '\(newETag)' - Saving to cache")
+                    cache.saveCache(etag: newETag, messages: messages)
+                }
+                
+                return messages
+                
+            case 304:
+                // Not Modified - use cached data
+                InAppLogger.shared.info("📦 Data not modified (304) - using cached messages")
+                let cachedMessages = cache.getCachedMessages()
+                
+                if let cachedMessages = cachedMessages {
+                    InAppLogger.shared.info("📦 Returning \(cachedMessages.count) cached messages")
+                    return cachedMessages
+                } else {
+                    InAppLogger.shared.info("📦 304 response but no cached messages found - clearing cache")
+                    cache.clearCache()
+                    return []
+                }
+                
+            default:
+                InAppLogger.shared.error("📦 Error fetching messages from API: \(httpResponse.statusCode)")
+                
+                // On error, try to return cached messages if available
+                let cachedMessages = cache.getCachedMessages()
+                if let cachedMessages = cachedMessages {
+                    InAppLogger.shared.info("📦 API error - falling back to cached messages")
+                    return cachedMessages
+                } else {
+                    throw RepositoryError.httpError(httpResponse.statusCode)
+                }
             }
             
-            let messagesResponse = try JSONDecoder().decode(MessagesResponse.self, from: data)
-            
-            InAppLogger.shared.info("Successfully fetched \(messagesResponse.data.count) messages (total: \(messagesResponse.metadata.total))")
-            return messagesResponse.data
-            
         } catch {
-            InAppLogger.shared.error("Failed to fetch messages: \(error)")
-            throw error
+            InAppLogger.shared.error("📦 Exception fetching messages from API: \(error)")
+            
+            // On network error, try to return cached messages if available
+            let cachedMessages = cache.getCachedMessages()
+            if let cachedMessages = cachedMessages {
+                InAppLogger.shared.info("📦 Network error - falling back to cached messages")
+                return cachedMessages
+            } else {
+                throw error
+            }
         }
     }
     
@@ -154,6 +204,19 @@ public class InAppMessageRepository {
             InAppLogger.shared.error("Failed to dispatch event: \(error)")
             throw error
         }
+    }
+    
+    /// Clear message cache
+    /// This will force fresh data fetch on next API call
+    public func clearCache() {
+        cache.clearCache()
+        InAppLogger.shared.info("📦 Repository cache cleared")
+    }
+    
+    /// Get cache status for debugging
+    /// - Returns: Cache status information
+    public func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {
+        return cache.getCacheStatus()
     }
 }
 

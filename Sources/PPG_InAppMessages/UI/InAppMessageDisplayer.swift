@@ -3,7 +3,6 @@
 
 import Foundation
 import UIKit
-import PPG_framework
 
 // Custom view that sets shadowPath for better shadow performance
 private class ShadowContainerView: UIView {
