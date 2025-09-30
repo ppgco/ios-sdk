@@ -11,15 +11,17 @@ public class InAppLogger {
     static let shared = InAppLogger()
     
     private let osLog: OSLog
-    private let isDebugEnabled: Bool
+    private var isDebugEnabled: Bool
     
     private init() {
         self.osLog = OSLog(subsystem: "com.pushpushgo.inappmessages", category: "InAppMessagesSDK")
-        #if DEBUG
-        self.isDebugEnabled = true
-        #else
-        self.isDebugEnabled = false
-        #endif
+        self.isDebugEnabled = false // Default to false - no logs unless explicitly enabled
+    }
+    
+    /// Enable or disable debug logging
+    /// - Parameter enabled: true to enable debug logs, false to disable
+    func setDebugEnabled(_ enabled: Bool) {
+        isDebugEnabled = enabled
     }
     
     // MARK: - Logging Methods
@@ -31,14 +33,20 @@ public class InAppLogger {
     }
     
     func info(_ message: String) {
-        os_log("%@", log: osLog, type: .info, message)
+        if isDebugEnabled {
+            os_log("%@", log: osLog, type: .info, message)
+        }
     }
     
     func error(_ message: String) {
-        os_log("%@", log: osLog, type: .error, message)
+        if isDebugEnabled {
+            os_log("%@", log: osLog, type: .error, message)
+        }
     }
     
     func fault(_ message: String) {
-        os_log("%@", log: osLog, type: .fault, message)
+        if isDebugEnabled {
+            os_log("%@", log: osLog, type: .fault, message)
+        }
     }
 }

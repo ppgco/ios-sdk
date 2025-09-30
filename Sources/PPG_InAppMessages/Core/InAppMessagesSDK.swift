@@ -55,12 +55,10 @@ import UIKit
     }
     
     @objc private func appDidEnterBackground() {
-        InAppLogger.shared.info("🌙 App entered background - stopping background timer")
         stopBackgroundTimer()
     }
     
     @objc private func appWillEnterForeground() {
-        InAppLogger.shared.info("☀️ App entering foreground - resuming background timer")
         if currentViewController != nil {
             startBackgroundTimer()
         }
@@ -70,7 +68,15 @@ import UIKit
     
     /// Initialize the SDK with API credentials
     /// Reference: Android initialize() method
-    @objc public func initialize(apiKey: String, projectId: String, isProduction: Bool = true) {
+    /// - Parameters:
+    ///   - apiKey: API key for authentication
+    ///   - projectId: Project ID for the app
+    ///   - isProduction: Use production or test environment (default: true)
+    ///   - isDebug: Enable debug logging (default: false)
+    @objc public func initialize(apiKey: String, projectId: String, isProduction: Bool = true, isDebug: Bool = false) {
+        // Enable/disable debug logging based on parameter
+        InAppLogger.shared.setDebugEnabled(isDebug)
+        
         guard !isInitialized else {
             InAppLogger.shared.info("InAppMessagesSDK already initialized")
             return
@@ -100,10 +106,9 @@ import UIKit
     }
     
     /// Set user ID for message targeting
-    /// Reference: Android setUserId() method
     @objc public func setUserId(_ userId: String) {
         self.userId = userId
-        InAppLogger.shared.info("User ID set: \(userId)")
+        InAppLogger.shared.debug("User ID set: \(userId)")
     }
     
     /// Set handler for JS actions from in-app message buttons
@@ -111,7 +116,7 @@ import UIKit
     /// - Parameter handler: Function that takes JS call string and processes it
     @objc public func setJsActionHandler(_ handler: @escaping (String) -> Void) {
         messageManager?.setJsActionHandler(handler)
-        InAppLogger.shared.info("JS action handler set")
+        InAppLogger.shared.debug("JS action handler set")
     }
     
     /// Handle view controller lifecycle - equivalent to Android onActivityResumed
@@ -158,18 +163,13 @@ import UIKit
         do {
             // Fetch messages from API
             let messages = try await repository?.getMessages(userId: userId ?? "") ?? []
-            InAppLogger.shared.info("SDK received \(messages.count) messages from repository")
-            
-            // Debug: Log message IDs
-            for message in messages {
-                InAppLogger.shared.debug("SDK has message: \(message.id)")
-            }
+            InAppLogger.shared.debug("Received \(messages.count) messages from API")
             
             // Filter and display eligible messages
             await messageManager?.processMessages(messages, viewController: viewController)
             
         } catch {
-            InAppLogger.shared.error("Failed to refresh messages: \(error)")
+            InAppLogger.shared.error("Failed to refresh messages: \(error.localizedDescription)")
         }
     }
     
@@ -193,7 +193,7 @@ import UIKit
     @objc public func showMessagesOnTrigger(key: String, value: String) {
         Task {
             guard let viewController = findCurrentViewController() else {
-                InAppLogger.shared.error("❌ Cannot find current view controller for custom trigger")
+                InAppLogger.shared.error("Cannot find view controller for custom trigger")
                 return
             }
             
@@ -206,23 +206,19 @@ import UIKit
     /// - Parameters:
     ///   - route: New route path (e.g., "home", "product-detail", "checkout")
     @objc public func onRouteChanged(_ route: String) {
-        let previousRoute = currentRoute
         currentRoute = route
         
         // CRITICAL: Update manager's current route for filtering
         messageManager?.setCurrentRoute(route)
         
-        InAppLogger.shared.info("🗺️ Route changed: '\(previousRoute)' → '\(route)'")
+        InAppLogger.shared.debug("Route changed to: '\(route)'")
         
         // Only refresh messages if we have a current view controller
         // This avoids duplication with onViewControllerWillAppear() during app startup
         if let viewController = currentViewController {
-            InAppLogger.shared.info("🗺️ Checking messages for new route '\(route)'")
             Task {
                 await refreshActiveMessages(viewController: viewController)
             }
-        } else {
-            InAppLogger.shared.info("🗺️ No current view controller - messages will be checked on next view appear")
         }
     }
     
@@ -230,12 +226,12 @@ import UIKit
     /// This will force fresh data fetch on next API call
     @objc public func clearMessageCache() {
         guard let repository = repository else {
-            InAppLogger.shared.info("Repository not initialized - cannot clear cache")
+            InAppLogger.shared.debug("Repository not initialized")
             return
         }
         
         repository.clearCache()
-        InAppLogger.shared.info("📦 Message cache cleared successfully")
+        InAppLogger.shared.info("Message cache cleared")
     }
     
     /// Get cache status for debugging (internal use)
@@ -249,7 +245,7 @@ import UIKit
     private func onMessageDismissed() {
         // Clear current message from manager to allow new messages
         messageManager?.clearCurrentMessage()
-        InAppLogger.shared.info("✅ Message dismissed and cleared - waiting for background timer")
+        InAppLogger.shared.debug("Message dismissed")
         
         // NOTE: Do NOT immediately refresh messages here
         // Let only the background timer decide when to check for eligible messages
@@ -268,25 +264,23 @@ import UIKit
             guard let self = self,
                   let viewController = self.currentViewController,
                   self.isInitialized else { 
-                InAppLogger.shared.debug("⏰ Background timer: skipping check (not initialized or no VC)")
                 return 
             }
             
-            InAppLogger.shared.info("⏰ Background timer: checking for eligible messages")
+            InAppLogger.shared.debug("Background timer: checking for messages")
             
             Task {
                 await self.refreshActiveMessages(viewController: viewController)
             }
         }
         
-        InAppLogger.shared.info("⏰ Background timer started (60s interval)")
+        InAppLogger.shared.debug("Background timer started (60s interval)")
     }
     
     /// Stop background timer
     private func stopBackgroundTimer() {
         backgroundTimer?.invalidate()
         backgroundTimer = nil
-        InAppLogger.shared.info("⏰ Background timer stopped")
     }
     
     /// Handle message events - equivalent to Android onMessageEvent
@@ -318,7 +312,6 @@ import UIKit
     private func findCurrentViewController() -> UIViewController? {
         // Strategy 1: Use stored currentViewController if available
         if let stored = currentViewController {
-            InAppLogger.shared.debug("Using stored currentViewController")
             return stored
         }
         
@@ -328,7 +321,6 @@ import UIKit
            let rootViewController = keyWindow.rootViewController {
             
             let topVC = findTopMostViewController(from: rootViewController)
-            InAppLogger.shared.debug("Found view controller from key window: \(type(of: topVC))")
             return topVC
         }
         
@@ -337,11 +329,10 @@ import UIKit
            let rootViewController = window.rootViewController {
             
             let topVC = findTopMostViewController(from: rootViewController)
-            InAppLogger.shared.debug("Found view controller from first window: \(type(of: topVC))")
             return topVC
         }
         
-        InAppLogger.shared.error("❌ Could not find any view controller")
+        InAppLogger.shared.error("Could not find view controller")
         return nil
     }
     

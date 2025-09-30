@@ -40,25 +40,20 @@ public class InAppMessageCache {
         let timeDiff = currentTime - timestamp
         let isExpired = timestamp > 0 && timeDiff > Self.cacheExpiryMs
         
-        InAppLogger.shared.debug("📦 Cache check - timestamp: \(timestamp), current: \(currentTime), diff: \(timeDiff)ms, expired: \(isExpired)")
-        
         if isExpired {
             // Cache expired - clear and return nil to force fresh fetch
-            InAppLogger.shared.info("📦 Cache expired after 24h - clearing cache")
+            InAppLogger.shared.debug("Cache expired, clearing")
             clearCache()
             return nil
         } else if timestamp == 0 {
-            InAppLogger.shared.debug("📦 No cache timestamp found - cache empty")
             return nil
         } else {
             let storedETag = userDefaults.string(forKey: Keys.etag)
-            InAppLogger.shared.debug("📦 Retrieved stored ETag: \(storedETag ?? "nil") (cache valid for \(Int((Self.cacheExpiryMs - timeDiff)/1000/60))min)")
             return storedETag
         }
     }
     
     /// Save ETag and messages to cache
-    /// Reference: Android saveCache() implementation
     /// - Parameters:
     ///   - etag: ETag from server response
     ///   - messages: Messages to cache
@@ -71,10 +66,10 @@ public class InAppMessageCache {
             userDefaults.set(messagesData, forKey: Keys.cachedMessages)
             userDefaults.set(currentTime, forKey: Keys.cacheTimestamp)
             
-            InAppLogger.shared.info("📦 Saved cache - ETag: \(etag), Messages: \(messages.count), Timestamp: \(currentTime)")
+            InAppLogger.shared.debug("Saved \(messages.count) messages to cache")
             
         } catch {
-            InAppLogger.shared.error("Failed to save cache: \(error)")
+            InAppLogger.shared.error("Failed to save cache: \(error.localizedDescription)")
         }
     }
     
@@ -83,17 +78,15 @@ public class InAppMessageCache {
     /// - Returns: Cached messages or nil if not found/invalid
     public func getCachedMessages() -> [InAppMessage]? {
         guard let messagesData = userDefaults.data(forKey: Keys.cachedMessages) else {
-            InAppLogger.shared.debug("📦 No cached messages found")
             return nil
         }
         
         do {
             let messages = try decoder.decode([InAppMessage].self, from: messagesData)
-            InAppLogger.shared.info("📦 Retrieved \(messages.count) cached messages")
             return messages
         } catch {
             // JSON parsing failed - clear cache and return nil
-            InAppLogger.shared.error("Failed to decode cached messages: \(error) - clearing cache")
+            InAppLogger.shared.error("Failed to decode cache: \(error.localizedDescription)")
             clearCache()
             return nil
         }
@@ -105,8 +98,6 @@ public class InAppMessageCache {
         userDefaults.removeObject(forKey: Keys.etag)
         userDefaults.removeObject(forKey: Keys.cachedMessages)
         userDefaults.removeObject(forKey: Keys.cacheTimestamp)
-        
-        InAppLogger.shared.info("📦 Cache cleared")
     }
     
     // MARK: - Debug Helpers

@@ -40,7 +40,7 @@ public class InAppMessageRepository {
         // Get stored ETag for cache validation
         let storedETag = cache.getStoredETag()
         
-        InAppLogger.shared.info("Fetching messages with ETag: \(storedETag ?? "nil")")
+        InAppLogger.shared.debug("Fetching messages (ETag: \(storedETag ?? "none"))")
         
         let baseEndpoint = "\(baseURL)/wi/v1/ios/projects/\(projectId)/popups"
         
@@ -65,7 +65,6 @@ public class InAppMessageRepository {
         // Add ETag header for cache validation
         if let storedETag = storedETag {
             request.setValue(storedETag, forHTTPHeaderField: "If-None-Match")
-            InAppLogger.shared.info("📦 SENDING If-None-Match: '\(storedETag)'")
         }
         
         do {
@@ -95,33 +94,32 @@ public class InAppMessageRepository {
                 
                 // Save ETag and cache the payload
                 if let newETag = httpResponse.allHeaderFields["Etag"] as? String {
-                    InAppLogger.shared.info("📦 RECEIVED ETag: '\(newETag)' - Saving to cache")
                     cache.saveCache(etag: newETag, messages: messages)
                 }
                 
+                InAppLogger.shared.debug("Fetched \(messages.count) messages from API")
                 return messages
                 
             case 304:
                 // Not Modified - use cached data
-                InAppLogger.shared.info("📦 Data not modified (304) - using cached messages")
                 let cachedMessages = cache.getCachedMessages()
                 
                 if let cachedMessages = cachedMessages {
-                    InAppLogger.shared.info("📦 Returning \(cachedMessages.count) cached messages")
+                    InAppLogger.shared.debug("Using \(cachedMessages.count) cached messages (304)")
                     return cachedMessages
                 } else {
-                    InAppLogger.shared.info("📦 304 response but no cached messages found - clearing cache")
+                    InAppLogger.shared.debug("304 response but no cache, clearing")
                     cache.clearCache()
                     return []
                 }
                 
             default:
-                InAppLogger.shared.error("📦 Error fetching messages from API: \(httpResponse.statusCode)")
+                InAppLogger.shared.error("API error: HTTP \(httpResponse.statusCode)")
                 
                 // On error, try to return cached messages if available
                 let cachedMessages = cache.getCachedMessages()
                 if let cachedMessages = cachedMessages {
-                    InAppLogger.shared.info("📦 API error - falling back to cached messages")
+                    InAppLogger.shared.debug("Using \(cachedMessages.count) cached messages (fallback)")
                     return cachedMessages
                 } else {
                     throw RepositoryError.httpError(httpResponse.statusCode)
@@ -129,12 +127,12 @@ public class InAppMessageRepository {
             }
             
         } catch {
-            InAppLogger.shared.error("📦 Exception fetching messages from API: \(error)")
+            InAppLogger.shared.error("Network error: \(error.localizedDescription)")
             
             // On network error, try to return cached messages if available
             let cachedMessages = cache.getCachedMessages()
             if let cachedMessages = cachedMessages {
-                InAppLogger.shared.info("📦 Network error - falling back to cached messages")
+                InAppLogger.shared.debug("Using \(cachedMessages.count) cached messages (network error)")
                 return cachedMessages
             } else {
                 throw error
@@ -168,7 +166,7 @@ public class InAppMessageRepository {
             let jsonData = try JSONSerialization.data(withJSONObject: eventPayload)
             request.httpBody = jsonData
             
-            InAppLogger.shared.info("Dispatching event: \(eventType) for message: \(messageId)")
+            InAppLogger.shared.debug("Dispatching event: \(eventType) for message: \(messageId)")
             
             // iOS 13+ compatible networking
             let (data, response): (Data, URLResponse) = try await withCheckedThrowingContinuation { continuation in
@@ -198,10 +196,10 @@ public class InAppMessageRepository {
                 }
             }
             
-            InAppLogger.shared.info("Successfully dispatched event: \(eventType)")
+            InAppLogger.shared.debug("Event dispatched: \(eventType)")
             
         } catch {
-            InAppLogger.shared.error("Failed to dispatch event: \(error)")
+            InAppLogger.shared.error("Failed to dispatch event: \(error.localizedDescription)")
             throw error
         }
     }
@@ -210,7 +208,6 @@ public class InAppMessageRepository {
     /// This will force fresh data fetch on next API call
     public func clearCache() {
         cache.clearCache()
-        InAppLogger.shared.info("📦 Repository cache cleared")
     }
     
     /// Get cache status for debugging

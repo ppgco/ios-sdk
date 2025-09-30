@@ -94,7 +94,7 @@ public class InAppMessageDisplayer {
         currentViewController = viewController
         
         let templateType = TemplateType.from(message.template)
-        InAppLogger.shared.info("\(tag): 🎯 Showing message \(message.id) with template \(templateType)")
+        InAppLogger.shared.debug("Showing message \(message.id)")
         
         // Create message view using appropriate template
         let messageView = createTemplateView(for: message, templateType: templateType)
@@ -172,8 +172,6 @@ public class InAppMessageDisplayer {
             messageView.transform = .identity
             self.overlayView?.alpha = 1
         }
-        
-        InAppLogger.shared.info("\(tag): ✅ Message displayed successfully")
         
         // Dispatch show event
         onMessageEvent("show", message, nil)
@@ -313,42 +311,37 @@ public class InAppMessageDisplayer {
         guard let message = currentMessage else { return }
         let actionIndex = sender.tag
         
-        InAppLogger.shared.info("\(tag): 🎯 Action tapped: \(actionIndex)")
-        
         if actionIndex < message.actions.count {
             let action = message.actions[actionIndex]
             
             // Handle different action types - ALL button actions send "cta" event (like Android)
             if let actionType = ActionType(rawValue: action.actionType) {
-                InAppLogger.shared.info("Parsed ActionType: \(actionType)")
                 onMessageEvent("cta", message, actionIndex)
                 
                 switch actionType {
                 case .redirect:
                     if let urlString = action.url, !urlString.isEmpty {
-                        InAppLogger.shared.info("REDIRECT action - URL: \(urlString)")
-                        
                         if let url = URL(string: urlString) {
                             if UIApplication.shared.canOpenURL(url) {
-                                InAppLogger.shared.info("Opening URL in browser: \(url)")
                                 UIApplication.shared.open(url) { success in
-                                    InAppLogger.shared.info("URL open result: \(success)")
                                     if success {
                                         // Dismiss only after successful URL opening
                                         DispatchQueue.main.async {
                                             self.dismissMessageSilently()
                                         }
+                                    } else {
+                                        InAppLogger.shared.error("Failed to open URL")
                                     }
                                 }
                                 return // Don't dismiss immediately - wait for URL open result
                             } else {
-                                InAppLogger.shared.error("Cannot open URL - not supported: \(url)")
+                                InAppLogger.shared.error("Cannot open URL")
                             }
                         } else {
-                            InAppLogger.shared.error("Invalid URL format: \(urlString)")
+                            InAppLogger.shared.error("Invalid URL format")
                         }
                     } else {
-                        InAppLogger.shared.error("REDIRECT action missing or empty URL")
+                        InAppLogger.shared.error("REDIRECT action missing URL")
                     }
                 case .close:
                     // CLOSE button action - just dismiss (cta event already sent above)
@@ -360,14 +353,14 @@ public class InAppMessageDisplayer {
                     if let jsCall = action.call, !jsCall.isEmpty {
                         handleJsAction(jsCall)
                     } else {
-                        InAppLogger.shared.error("JS action missing 'call' field")
+                        InAppLogger.shared.error("JS action missing call")
                     }
                 }
             } else {
-                InAppLogger.shared.error("Cannot parse ActionType from: \(action.actionType)")
+                InAppLogger.shared.error("Invalid ActionType: \(action.actionType)")
             }
         } else {
-            InAppLogger.shared.error("Action index \(actionIndex) out of bounds (total: \(message.actions.count))")
+            InAppLogger.shared.error("Action index out of bounds")
         }
         
         dismissMessageSilently()
@@ -390,13 +383,11 @@ public class InAppMessageDisplayer {
         
         if isSubscribed && !isBlocked {
             // User is already fully subscribed
-            InAppLogger.shared.info("User already subscribed to notifications")
             showToast(message: "You are already subscribed to push notifications!")
             dismissMessageSilently()
             return
         } else if isBlocked {
             // Notifications are blocked at system level
-            InAppLogger.shared.info("Notifications blocked - directing to settings")
             showToast(message: "Please enable notifications in Settings first.")
             dismissMessageSilently()
             return
@@ -404,7 +395,6 @@ public class InAppMessageDisplayer {
         
         Task {
             let success = await subscriptionHandler.requestSubscription(viewController: viewController)
-            InAppLogger.shared.info("Subscribe action result: \(success)")
             
             DispatchQueue.main.async {
                 // Show Toast message like Android
@@ -421,9 +411,9 @@ public class InAppMessageDisplayer {
     private func handleJsAction(_ jsCall: String) {
         if let handler = jsActionHandler {
             handler(jsCall)
-            InAppLogger.shared.info("JS action executed: \(jsCall)")
+            InAppLogger.shared.debug("JS action executed")
         } else {
-            InAppLogger.shared.info("No JS action handler provided for call: \(jsCall)")
+            InAppLogger.shared.debug("No JS action handler provided")
         }
     }
     

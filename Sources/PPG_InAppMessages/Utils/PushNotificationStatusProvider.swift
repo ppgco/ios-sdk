@@ -37,7 +37,6 @@ public class PushNotificationStatusProvider {
     /// - Returns: true if subscribed (defaults to false if not found)
     public func isSubscribed() -> Bool {
         let result = userDefaults.bool(forKey: Self.isSubscribed)
-        InAppLogger.shared.info("\(Self.tag): Checking subscription status: \(result)")
         return result
     }
     
@@ -123,7 +122,7 @@ public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
                 
                 // Get result from notification
                 let success = notification.userInfo?["success"] as? Bool ?? false
-                InAppLogger.shared.info("\(Self.tag): Received subscription result: \(success)")
+                InAppLogger.shared.debug("Subscription result: \(success)")
                 continuation.resume(returning: success)
             }
             
@@ -138,7 +137,7 @@ public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
                 if let observer = observer {
                     NotificationCenter.default.removeObserver(observer)
                 }
-                InAppLogger.shared.error("\(Self.tag): Subscription request timeout")
+                InAppLogger.shared.error("Subscription request timeout")
                 continuation.resume(returning: false)
             }
             
@@ -150,7 +149,7 @@ public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
                 userInfo: userInfo
             )
             
-            InAppLogger.shared.info("\(Self.tag): Subscription request sent via NotificationCenter")
+            InAppLogger.shared.debug("Subscription request sent")
         }
     }
 }

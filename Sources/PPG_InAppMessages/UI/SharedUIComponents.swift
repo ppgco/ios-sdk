@@ -85,7 +85,7 @@ public class SharedUIComponents {
                 style: styleString
             )
             
-            InAppLogger.shared.info("Action font loaded: \(customFont.fontName) - weight: \(action.fontWeight), style: \(styleString)")
+            InAppLogger.shared.debug("Action font loaded: \(customFont.fontName)")
             button.titleLabel?.font = customFont
             
             // Apply underline if needed

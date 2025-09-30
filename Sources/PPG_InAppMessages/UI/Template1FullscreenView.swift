@@ -194,8 +194,6 @@ public class Template1FullscreenView {
             messageView.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
             messageView.bottomAnchor.constraint(equalTo: viewController.view.safeAreaLayoutGuide.bottomAnchor)
         ])
-        
-        InAppLogger.shared.info("📱 Template 1 Fullscreen: Image 50% + Content 50%")
     }
 }
 

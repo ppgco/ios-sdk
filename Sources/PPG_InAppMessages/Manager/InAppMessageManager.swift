@@ -52,10 +52,10 @@ public class InAppMessageManager {
     ///   - viewController: Current view controller for display
     ///   - skipTriggerCheck: Skip trigger type validation (for custom triggers)
     public func processMessages(_ messages: [InAppMessage], viewController: UIViewController, skipTriggerCheck: Bool = false) async {
-        InAppLogger.shared.info("🔍 processMessages called with \(messages.count) messages")
+        InAppLogger.shared.debug("Processing \(messages.count) messages")
         
         guard currentlyDisplayedMessage == nil else {
-            InAppLogger.shared.info("Message already displayed, skipping processing")
+            InAppLogger.shared.debug("Message already displayed, skipping")
             return
         }
         
@@ -72,7 +72,7 @@ public class InAppMessageManager {
         if let message = sortedMessages.first {
             await displayMessage(message, viewController: viewController)
         } else {
-            InAppLogger.shared.info("No eligible messages to display")
+            InAppLogger.shared.debug("No eligible messages to display")
         }
     }
     
@@ -83,34 +83,22 @@ public class InAppMessageManager {
     ///   - value: Custom trigger value to match  
     ///   - viewController: Current view controller
     public func handleCustomTrigger(key: String, value: String, viewController: UIViewController) async {
-        InAppLogger.shared.info("🎯 Custom trigger called with key: '\(key)', value: '\(value)'")
+        InAppLogger.shared.debug("Custom trigger: key='\(key)', value='\(value)'")
         
         do {
             let messages = try await repository.getMessages(userId: "")
-            InAppLogger.shared.info("📨 Found \(messages.count) total messages for custom trigger check")
             
             let customTriggerMessages = messages.filter { message in
-                InAppLogger.shared.debug("Checking message \(message.id) - triggerType: '\(message.settings.triggerType)'")
-                
                 // Check if message has custom trigger type
                 guard message.matchesTrigger(.custom) else { 
-                    InAppLogger.shared.debug("❌ Message \(message.id) is not CUSTOM trigger type")
                     return false 
                 }
-                
-                InAppLogger.shared.debug("✅ Message \(message.id) has CUSTOM trigger type")
                 
                 // Key-Value matching logic: both key AND value must match
                 if let customKey = message.settings.customTriggerKey,
                    let customValue = message.settings.customTriggerValue {
-                    InAppLogger.shared.debug("🔑 Message \(message.id) has customKey: '\(customKey)', customValue: '\(customValue)'")
-                    let keyMatches = customKey == key
-                    let valueMatches = customValue == value
-                    let bothMatch = keyMatches && valueMatches
-                    InAppLogger.shared.debug("Key match: \(keyMatches), Value match: \(valueMatches) → \(bothMatch ? "✅ FULL MATCH!" : "❌ No match")")
-                    return bothMatch
+                    return customKey == key && customValue == value
                 } else {
-                    InAppLogger.shared.debug("❌ Message \(message.id) missing customTriggerKey or customTriggerValue")
                     return false
                 }
             }
@@ -122,16 +110,13 @@ public class InAppMessageManager {
                 return leftPriority < rightPriority
             }
             
-            InAppLogger.shared.info("🎯 Found \(customTriggerMessages.count) matching custom trigger messages")
+            InAppLogger.shared.debug("Found \(customTriggerMessages.count) matching messages for custom trigger")
             if !sortedMessages.isEmpty {
-                InAppLogger.shared.info("🚀 Processing custom trigger messages (priority sorted)")
                 await processMessages(sortedMessages, viewController: viewController, skipTriggerCheck: true)
-            } else {
-                InAppLogger.shared.info("ℹ️ No custom trigger messages match key: '\(key)', value: '\(value)'")
             }
             
         } catch {
-            InAppLogger.shared.error("Failed to handle custom trigger: \(error)")
+            InAppLogger.shared.error("Failed to handle custom trigger: \(error.localizedDescription)")
         }
     }
     
@@ -141,7 +126,7 @@ public class InAppMessageManager {
         let currentTime = Date().timeIntervalSince1970
         displayHistory[messageId] = currentTime
         saveDisplayHistory()
-        InAppLogger.shared.info("📝 Marked message \(messageId) as displayed at \(currentTime)")
+        InAppLogger.shared.debug("Message \(messageId) marked as displayed")
     }
     
     /// Clear currently displayed message
@@ -166,32 +151,21 @@ public class InAppMessageManager {
         let display = message.settings.display
         let displayOn = message.settings.displayOn
         
-        InAppLogger.shared.debug("Checking message \(message.id) - display: '\(display)' for route: '\(route)'")
-        
         // If display is "all", show on every route
         if display.lowercased() == "all" {
-            InAppLogger.shared.debug("✅ Message \(message.id) set to display on ALL routes")
             return true
         }
         
         // If display is "selected", check displayOn array
         if display.lowercased() == "selected" {
-            InAppLogger.shared.debug("🗺️ Message \(message.id) set to display on SELECTED routes, checking \(displayOn.count) route configs")
-            
             for routeConfig in displayOn {
-                InAppLogger.shared.debug("  Route config: path='\(routeConfig.path)', display=\(routeConfig.display)")
-                
                 if routeConfig.path == route && routeConfig.display {
-                    InAppLogger.shared.debug("✅ Message \(message.id) MATCHES route '\(route)' with display=true")
                     return true
                 }
             }
-            
-            InAppLogger.shared.debug("❌ Message \(message.id) no matching route config for route '\(route)'")
             return false
         }
         
-        InAppLogger.shared.debug("❌ Message \(message.id) unknown display setting: '\(display)' - allowing by default")
         return true // Default behavior for unknown display settings
     }
     
@@ -203,58 +177,49 @@ public class InAppMessageManager {
     /// - Parameter skipTriggerCheck: Skip trigger type validation (for custom triggers)
     /// - Returns: Filtered eligible messages
     private func filterEligibleMessages(_ messages: [InAppMessage], skipTriggerCheck: Bool = false) async -> [InAppMessage] {
-        InAppLogger.shared.info("Filtering \(messages.count) messages")
-        
         return messages.filter { message in
             // Don't show message that's already being displayed
             if let currentlyDisplayed = currentlyDisplayedMessage,
                currentlyDisplayed.id == message.id {
-                InAppLogger.shared.debug("❌ Message \(message.id) is already being displayed")
                 return false
             }
-            InAppLogger.shared.debug("Processing message \(message.id)")
             
             // Check if message is enabled
             guard message.enabled else {
-                InAppLogger.shared.debug("❌ Message \(message.id) is disabled")
+                InAppLogger.shared.debug("Message \(message.id) is disabled")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) is enabled")
             
             // CRITICAL FIX: Apply corrected audience type matching logic
             guard message.matchesAudience(provider: statusProvider) else {
-                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match audience (userType: \(message.audience.userType))")
+                InAppLogger.shared.debug("Message \(message.id) doesn't match audience")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) matches audience")
             
             // Check platform targeting - iOS is considered MOBILE platform
             guard message.matchesPlatform() else {
-                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match platform (platform: \(message.audience.platform))")
+                InAppLogger.shared.debug("Message \(message.id) doesn't match platform")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) matches platform")
             
             // Check device targeting - iOS should show for ALL or MOBILE devices
             guard message.matchesDevice() else {
-                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match device targeting (device: \(message.audience.device))")
+                InAppLogger.shared.debug("Message \(message.id) doesn't match device")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) matches device targeting")
             
             // Check OS type targeting - iOS should show for ALL or IOS
             guard message.matchesOSType() else {
-                InAppLogger.shared.debug("❌ Message \(message.id) doesn't match OS type targeting (osType: \(message.audience.osType))")
+                InAppLogger.shared.debug("Message \(message.id) doesn't match OS type")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) matches OS type targeting")
             
             // Check display history for "show again" logic
             if let lastDisplayTime = displayHistory[message.id] {
                 let showAgain = message.settings.showAgain.uppercased().trimmingCharacters(in: .whitespacesAndNewlines)
                 
                 if showAgain == "NEVER" {
-                    InAppLogger.shared.debug("❌ Message \(message.id) already shown and set to never show again")
+                    InAppLogger.shared.debug("Message \(message.id) already shown (NEVER show again)")
                     return false
                 } else if showAgain == "AFTER_TIME" {
                     let showAfterTimeSeconds = TimeInterval(message.settings.showAfterTime)
@@ -262,38 +227,28 @@ public class InAppMessageManager {
                     let timeSinceLastDisplay = currentTime - lastDisplayTime
                     
                     if timeSinceLastDisplay < showAfterTimeSeconds {
-                        let remainingTime = showAfterTimeSeconds - timeSinceLastDisplay
-                        InAppLogger.shared.debug("❌ Message \(message.id) shown \(Int(timeSinceLastDisplay))s ago, need to wait \(Int(remainingTime))s more")
+                        InAppLogger.shared.debug("Message \(message.id) shown recently, waiting \(Int(showAfterTimeSeconds - timeSinceLastDisplay))s more")
                         return false
-                    } else {
-                        InAppLogger.shared.debug("✅ Message \(message.id) can be shown again (waited \(Int(timeSinceLastDisplay))s)")
                     }
                 }
-                // If showAgain is neither NEVER nor AFTER_TIME, allow showing (fallback behavior)
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) passed display history check")
             
             let shouldDisplayOnCurrentRoute = shouldDisplayMessageOnRoute(message, route: currentRoute)
             if !shouldDisplayOnCurrentRoute {
-                InAppLogger.shared.debug("❌ Message \(message.id) not allowed on current route")
+                InAppLogger.shared.debug("Message \(message.id) not allowed on route '\(currentRoute)'")
                 return false
             }
-            InAppLogger.shared.debug("✅ Message \(message.id) passed route-based display check")
             
             // Check if message should be shown on current trigger
             if skipTriggerCheck {
-                InAppLogger.shared.debug("✅ Message \(message.id) trigger check skipped (custom trigger already validated)")
                 return true
             }
             
             // For normal flow, focus on ENTER trigger type
-            InAppLogger.shared.debug("Message \(message.id) trigger type: \(message.settings.triggerType)")
             if message.matchesTrigger(.enter) {
-                InAppLogger.shared.debug("✅ Message \(message.id) matches ENTER trigger")
                 return true
             }
             
-            InAppLogger.shared.debug("❌ Message \(message.id) doesn't match current trigger")
             return false
         }
     }
@@ -309,19 +264,18 @@ public class InAppMessageManager {
         
         // ACTUALLY display the message using InAppMessageDisplayer
         guard let displayer = displayer else {
-            InAppLogger.shared.error("❌ No displayer available - cannot show message")
+            InAppLogger.shared.error("No displayer available")
             return
         }
         
         // Apply showAfterDelay if specified
         let delaySeconds = message.settings.showAfterDelay
         if delaySeconds > 0 {
-            InAppLogger.shared.info("⏱️ Delaying message \(message.id) by \(delaySeconds) seconds")
+            InAppLogger.shared.debug("Delaying message by \(delaySeconds)s")
             try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
         }
         
         DispatchQueue.main.async {
-            InAppLogger.shared.info("🚀 Showing message on main thread")
             displayer.showMessage(message, in: viewController)
         }
         
