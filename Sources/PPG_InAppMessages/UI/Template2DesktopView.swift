@@ -22,11 +22,6 @@ public class Template2DesktopView {
         }
         containerView.clipsToBounds = true
         
-        // Add drop shadow if enabled
-        if message.style.dropShadow {
-            addDropShadow(to: containerView)
-        }
-        
         // Main horizontal stack - image 30% left + content 70% right
         let mainStack = UIStackView()
         mainStack.axis = .horizontal
@@ -206,16 +201,6 @@ public class Template2DesktopView {
         return containerView
     }
     
-    
-    /// Add drop shadow to container
-    private static func addDropShadow(to view: UIView) {
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOffset = CGSize(width: 10, height: 15)
-        view.layer.shadowRadius = 10
-        view.layer.shadowOpacity = 0.30
-        view.layer.masksToBounds = false
-    }
-    
     /// Setup constraints for desktop modal with placement support
     public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
@@ -257,8 +242,5 @@ public class Template2DesktopView {
         }
         
         NSLayoutConstraint.activate(constraints)
-        
-        let verticalDesc = isTop ? "top" : (isBottom ? "bottom" : "center")
-        InAppLogger.shared.info("🖥️ Template 2 Desktop Modal: \(preferredWidth)px wide, \(verticalDesc)-center")
     }
 }

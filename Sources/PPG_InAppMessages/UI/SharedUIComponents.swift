@@ -139,37 +139,38 @@ public class SharedUIComponents {
         heightConstraint.priority = UILayoutPriority(999) // High priority but not required - allows UIKit to override if needed
         heightConstraint.isActive = true
         
-        print("🔴 Button text: '\(action.text)' -> calculated height: \(exactHeight)");
-        
         button.tag = actionIndex
         return button
     }
     
     // MARK: - Label Creation
     
-    /// Create title label with font family support
-    public static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+    /// Create label with common styling logic (shared between title and description)
+    private static func createStyledLabel(
+        text: String,
+        fontSize: Int,
+        fontWeight: Int,
+        color: String,
+        alignment: String,
+        style: String,
+        fontFamily: String?,
+        fontUrl: String?
+    ) -> UILabel {
         let label = UILabel()
-        label.text = title.text
+        label.text = text
         
         // Set initial system font with 1.3x multiplier
-        let weight = UIStyleParser.parseFontWeight(title.fontWeight)
-        let fontSize = CGFloat(title.fontSize) * 1.3
+        let weight = UIStyleParser.parseFontWeight(fontWeight)
+        let calculatedFontSize = CGFloat(fontSize) * 1.3
+        let styleString = style.lowercased()
         
-        // Debug font weight
-        InAppLogger.shared.info("Title font weight: \(title.fontWeight) -> \(weight.rawValue) (\(weight))")
-        
-        // Apply style if specified
-        let styleString = title.style.lowercased() ?? "normal"
-        
-        // Force system font with proper weight - this ensures weight is always applied
-        let baseFont = UIFont.systemFont(ofSize: fontSize, weight: weight)
-        InAppLogger.shared.info("Created system font: \(baseFont.fontName) - \(baseFont.pointSize) - weight: \(weight)")
+        // Create base system font
+        let baseFont = UIFont.systemFont(ofSize: calculatedFontSize, weight: weight)
         
         if styleString == "italic" {
             let traits: UIFontDescriptor.SymbolicTraits = [.traitItalic]
             if let descriptor = baseFont.fontDescriptor.withSymbolicTraits(traits) {
-                label.font = UIFont(descriptor: descriptor, size: fontSize)
+                label.font = UIFont(descriptor: descriptor, size: calculatedFontSize)
             } else {
                 label.font = baseFont
             }
@@ -179,37 +180,34 @@ public class SharedUIComponents {
         
         // Apply underline if specified
         if styleString == "underline" {
-            let attributedText = NSMutableAttributedString(string: title.text)
+            let attributedText = NSMutableAttributedString(string: text)
             let range = NSRange(location: 0, length: attributedText.length)
             attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
-            // Preserve font and color for attributed text
             attributedText.addAttribute(.font, value: label.font!, range: range)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: title.color), range: range)
+            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: range)
             label.attributedText = attributedText
         }
         
         // Load custom font synchronously if provided
         if let fontFamily = fontFamily, !fontFamily.isEmpty {
-            let styleString = title.style.lowercased() ?? "normal"
             let customFont = FontManager.shared.loadFont(
                 family: fontFamily,
-                size: fontSize,
-                weight: title.fontWeight,
+                size: calculatedFontSize,
+                weight: fontWeight,
                 style: styleString
             )
             
-            InAppLogger.shared.info("Title font loaded: \(customFont.fontName) - weight: \(title.fontWeight), style: \(styleString)")
+            InAppLogger.shared.debug("Label font: \(customFont.fontName)")
             label.font = customFont
             
             // Apply styles with custom font
-            let alignment = title.alignment.lowercased()
-            
-            let attributedText = NSMutableAttributedString(string: title.text)
+            let alignmentLower = alignment.lowercased()
+            let attributedText = NSMutableAttributedString(string: text)
             let range = NSRange(location: 0, length: attributedText.length)
             
-            // Apply font
+            // Apply font and color
             attributedText.addAttribute(.font, value: customFont, range: range)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: title.color), range: range)
+            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: range)
             
             // Apply underline if needed
             if styleString == "underline" {
@@ -218,57 +216,44 @@ public class SharedUIComponents {
             
             // Apply alignment
             let paragraphStyle = NSMutableParagraphStyle()
-            switch alignment {
-            case "left":
-                paragraphStyle.alignment = .left
-            case "center":
-                paragraphStyle.alignment = .center
-            case "right":
-                paragraphStyle.alignment = .right
-            default:
-                paragraphStyle.alignment = .left
+            if alignmentLower == "justify" {
+                paragraphStyle.alignment = .justified
+                paragraphStyle.lineBreakMode = .byWordWrapping
+            } else {
+                paragraphStyle.alignment = UIStyleParser.parseTextAlignment(alignment)
+                paragraphStyle.lineBreakMode = .byWordWrapping
             }
             attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
             
             label.attributedText = attributedText
-        } else {
-            // No custom font - ensure system font weight is preserved
-            InAppLogger.shared.info("Title using system font with weight: \(weight)")
         }
         
-        label.textColor = UIColor(hex: title.color)
+        label.textColor = UIColor(hex: color)
         
         // Set text alignment - special handling for justify
-        let alignment = title.alignment.lowercased()
-        InAppLogger.shared.info("Title alignment: '\(title.alignment)' -> '\(alignment)'")
-        
-        if alignment == "justify" {
-            // For justified text, preserve existing attributed text if it exists (for underline, etc.)
+        let alignmentLower = alignment.lowercased()
+        if alignmentLower == "justify" {
             let attributedText: NSMutableAttributedString
             if let existingAttributedText = label.attributedText {
-                // Use existing attributed text to preserve underline and other attributes
                 attributedText = NSMutableAttributedString(attributedString: existingAttributedText)
             } else {
-                // Create new attributed text if none exists
-                attributedText = NSMutableAttributedString(string: title.text)
+                attributedText = NSMutableAttributedString(string: text)
                 attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
-                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: title.color), range: NSRange(location: 0, length: attributedText.length))
+                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: NSRange(location: 0, length: attributedText.length))
             }
             
             let paragraphStyle = NSMutableParagraphStyle()
             paragraphStyle.alignment = .justified
             paragraphStyle.lineBreakMode = .byWordWrapping
-            paragraphStyle.hyphenationFactor = 1.0  // Enable hyphenation for better justification
+            paragraphStyle.hyphenationFactor = 1.0
             
             let fullRange = NSRange(location: 0, length: attributedText.length)
             attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
             
             label.attributedText = attributedText
-            label.textAlignment = .justified  // Also set the label alignment as backup
-            InAppLogger.shared.info("Applied justified alignment to title with hyphenation")
+            label.textAlignment = .justified
         } else {
-            label.textAlignment = UIStyleParser.parseTextAlignment(title.alignment)
-            InAppLogger.shared.info("Applied standard alignment: \(UIStyleParser.parseTextAlignment(title.alignment))")
+            label.textAlignment = UIStyleParser.parseTextAlignment(alignment)
         }
         
         label.numberOfLines = 0
@@ -276,132 +261,32 @@ public class SharedUIComponents {
         return label
     }
     
+    /// Create title label with font family support
+    public static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+        return createStyledLabel(
+            text: title.text,
+            fontSize: title.fontSize,
+            fontWeight: title.fontWeight,
+            color: title.color,
+            alignment: title.alignment,
+            style: title.style ?? "normal",
+            fontFamily: fontFamily,
+            fontUrl: fontUrl
+        )
+    }
+    
     /// Create description label with font family support
     public static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
-        let label = UILabel()
-        label.text = description.text
-        
-        // Set initial system font with 1.3x multiplier
-        let weight = UIStyleParser.parseFontWeight(description.fontWeight)
-        let fontSize = CGFloat(description.fontSize) * 1.3
-        
-        // Debug font weight
-        InAppLogger.shared.info("Description font weight: \(description.fontWeight) -> \(weight.rawValue) (\(weight))")
-        
-        // Apply style if specified
-        let styleString = description.style.lowercased() ?? "normal"
-        
-        // Force system font with proper weight - this ensures weight is always applied
-        let baseFont = UIFont.systemFont(ofSize: fontSize, weight: weight)
-        InAppLogger.shared.info("Created system font: \(baseFont.fontName) - \(baseFont.pointSize) - weight: \(weight)")
-        
-        if styleString == "italic" {
-            let traits: UIFontDescriptor.SymbolicTraits = [.traitItalic]
-            if let descriptor = baseFont.fontDescriptor.withSymbolicTraits(traits) {
-                label.font = UIFont(descriptor: descriptor, size: fontSize)
-            } else {
-                label.font = baseFont
-            }
-        } else {
-            label.font = baseFont
-        }
-        
-        // Apply underline if specified
-        if styleString == "underline" {
-            let attributedText = NSMutableAttributedString(string: description.text)
-            let range = NSRange(location: 0, length: attributedText.length)
-            attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
-            // Preserve font and color for attributed text
-            attributedText.addAttribute(.font, value: label.font!, range: range)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: description.color), range: range)
-            label.attributedText = attributedText
-        }
-        
-        // Load custom font synchronously if provided
-        if let fontFamily = fontFamily, !fontFamily.isEmpty {
-            let styleString = description.style.lowercased() ?? "normal"
-            let customFont = FontManager.shared.loadFont(
-                family: fontFamily,
-                size: fontSize,
-                weight: description.fontWeight,
-                style: styleString
-            )
-            
-            InAppLogger.shared.info("Description font loaded: \(customFont.fontName) - weight: \(description.fontWeight), style: \(styleString)")
-            label.font = customFont
-            
-            // Apply styles with custom font
-            let alignment = description.alignment.lowercased()
-            
-            let attributedText = NSMutableAttributedString(string: description.text)
-            let range = NSRange(location: 0, length: attributedText.length)
-            
-            // Apply font
-            attributedText.addAttribute(.font, value: customFont, range: range)
-            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: description.color), range: range)
-            
-            // Apply underline if needed
-            if styleString == "underline" {
-                attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
-            }
-            
-            // Apply paragraph style for justify alignment
-            if alignment == "justify" {
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.alignment = .justified
-                paragraphStyle.lineBreakMode = .byWordWrapping
-                attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
-            } else {
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.alignment = UIStyleParser.parseTextAlignment(description.alignment)
-                paragraphStyle.lineBreakMode = .byWordWrapping
-                attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
-            }
-            
-            label.attributedText = attributedText
-        } else {
-            // No custom font - ensure system font weight is preserved
-            InAppLogger.shared.info("Description using system font with weight: \(weight)")
-        }
-        
-        label.textColor = UIColor(hex: description.color)
-        
-        // Set text alignment - special handling for justify
-        let alignment = description.alignment.lowercased()
-        InAppLogger.shared.info("Description alignment: '\(description.alignment)' -> '\(alignment)'")
-        
-        if alignment == "justify" {
-            // For justified text, preserve existing attributed text if it exists (for underline, etc.)
-            let attributedText: NSMutableAttributedString
-            if let existingAttributedText = label.attributedText {
-                // Use existing attributed text to preserve underline and other attributes
-                attributedText = NSMutableAttributedString(attributedString: existingAttributedText)
-            } else {
-                // Create new attributed text if none exists
-                attributedText = NSMutableAttributedString(string: description.text)
-                attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
-                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: description.color), range: NSRange(location: 0, length: attributedText.length))
-            }
-            
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .justified
-            paragraphStyle.lineBreakMode = .byWordWrapping
-            paragraphStyle.hyphenationFactor = 1.0  // Enable hyphenation for better justification
-            
-            let fullRange = NSRange(location: 0, length: attributedText.length)
-            attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
-            
-            label.attributedText = attributedText
-            label.textAlignment = .justified  // Also set the label alignment as backup
-            InAppLogger.shared.info("Applied justified alignment to description with hyphenation")
-        } else {
-            label.textAlignment = UIStyleParser.parseTextAlignment(description.alignment)
-            InAppLogger.shared.info("Applied standard alignment: \(UIStyleParser.parseTextAlignment(description.alignment))")
-        }
-        
-        label.numberOfLines = 0
-        label.lineBreakMode = .byWordWrapping
-        return label
+        return createStyledLabel(
+            text: description.text,
+            fontSize: description.fontSize,
+            fontWeight: description.fontWeight,
+            color: description.color,
+            alignment: description.alignment,
+            style: description.style ?? "normal",
+            fontFamily: fontFamily,
+            fontUrl: fontUrl
+        )
     }
     
     // MARK: - Image Creation
@@ -477,48 +362,6 @@ public class UIStyleParser {
     /// Parse float value from string
     public static func parseFloat(_ value: String) -> CGFloat {
         return CGFloat(Double(value.replacingOccurrences(of: "px", with: "")) ?? 0.0)
-    }
-    
-    /// Map font family to system font with fallback
-    public static func mapToSystemFont(fontFamily: String, size: CGFloat, weight: UIFont.Weight) -> UIFont {
-        // First try exact font name
-        if let customFont = UIFont(name: fontFamily, size: size) {
-            return customFont
-        }
-        
-        // Map common font families to iOS system fonts
-        let lowercaseFamily = fontFamily.lowercased()
-        
-        switch lowercaseFamily {
-        case "roboto", "open sans", "fira sans":
-            // Sans-serif fonts - use system font
-            return UIFont.systemFont(ofSize: size, weight: weight)
-            
-        case "montserrat", "inter", "poppins", "lato":
-            // Modern sans-serif - use system font with appropriate weight
-            return UIFont.systemFont(ofSize: size, weight: weight)
-            
-        case "playfair display":
-            // Serif display font - try system serif, fallback to system
-            if #available(iOS 13.0, *) {
-                return UIFont(descriptor: UIFont.systemFont(ofSize: size, weight: weight).fontDescriptor.withDesign(.serif) ?? UIFont.systemFont(ofSize: size, weight: weight).fontDescriptor, size: size)
-            } else {
-                return UIFont.systemFont(ofSize: size, weight: weight)
-            }
-            
-        case "arial":
-            // Try Arial, fallback to system
-            return UIFont(name: "Arial", size: size) ?? UIFont.systemFont(ofSize: size, weight: weight)
-            
-        case "georgia":
-            // Try Georgia, fallback to system
-            return UIFont(name: "Georgia", size: size) ?? UIFont.systemFont(ofSize: size, weight: weight)
-            
-        default:
-            // Unknown font - use system font
-            InAppLogger.shared.info("Font '\(fontFamily)' mapped to system font")
-            return UIFont.systemFont(ofSize: size, weight: weight)
-        }
     }
     
     /// Parse padding string to UIEdgeInsets - supports both single values and CSS-style multi-values

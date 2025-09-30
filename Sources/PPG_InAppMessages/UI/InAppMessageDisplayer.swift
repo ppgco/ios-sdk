@@ -139,18 +139,27 @@ public class InAppMessageDisplayer {
             addCloseButton(to: messageView, style: message.style)
         }
         
-        // Setup overlay for modal templates
-        if message.style.overlay {
-            setupOverlay(in: viewController)
-        }
+        // Determine the correct container view to avoid SwiftUI warnings
+        let containerView = getContainerView(for: viewController)
+        let isUsingWindow = containerView !== viewController.view
         
-        // Add final view (either messageView or shadowContainer) to view controller
-        viewController.view.addSubview(finalView)
+        // Add final view (either messageView or shadowContainer) to container
+        containerView.addSubview(finalView)
+        
+        // Setup overlay for modal templates AFTER adding finalView
+        if message.style.overlay {
+            setupOverlay(in: containerView, below: finalView)
+        }
         
         // Apply zIndex from style
         finalView.layer.zPosition = CGFloat(message.style.zIndex)
         
-        setupTemplateConstraints(finalView, in: viewController, templateType: templateType)
+        // Setup constraints - use container view for SwiftUI, viewController for UIKit
+        if isUsingWindow {
+            setupTemplateConstraintsForWindow(finalView, in: containerView, templateType: templateType)
+        } else {
+            setupTemplateConstraints(finalView, in: viewController, templateType: templateType)
+        }
         
         // Setup action button targets
         setupActionTargets(in: messageView)
@@ -262,6 +271,72 @@ public class InAppMessageDisplayer {
         }
     }
     
+    /// Setup constraints for window-based layout (SwiftUI compatibility)
+    private func setupTemplateConstraintsForWindow(_ messageView: UIView, in window: UIView, templateType: TemplateType) {
+        guard let message = currentMessage else { return }
+        messageView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Get screen dimensions and safe area
+        let screenWidth = window.bounds.width
+        let screenHeight = window.bounds.height
+        let safeArea = window.safeAreaInsets
+        
+        var constraints: [NSLayoutConstraint] = []
+        
+        switch templateType {
+        case .fullscreen:
+            // Fullscreen - fill entire window with safe area
+            constraints = [
+                messageView.topAnchor.constraint(equalTo: window.topAnchor, constant: safeArea.top),
+                messageView.leadingAnchor.constraint(equalTo: window.leadingAnchor, constant: safeArea.left),
+                messageView.trailingAnchor.constraint(equalTo: window.trailingAnchor, constant: -safeArea.right),
+                messageView.bottomAnchor.constraint(equalTo: window.bottomAnchor, constant: -safeArea.bottom)
+            ]
+            
+        case .desktop:
+            // Desktop modal - centered with max width
+            let maxWidth: CGFloat = 520
+            let preferredWidth = min(maxWidth, screenWidth - 40)
+            let margin: CGFloat = 15 + safeArea.top // Add safe area to margin
+            
+            constraints = [
+                messageView.centerXAnchor.constraint(equalTo: window.centerXAnchor),
+                messageView.widthAnchor.constraint(equalToConstant: preferredWidth)
+            ]
+            
+            // Handle placement
+            let placement = message.layout.placement.lowercased()
+            if placement.contains("top") {
+                constraints.append(messageView.topAnchor.constraint(equalTo: window.topAnchor, constant: margin))
+            } else if placement.contains("bottom") {
+                constraints.append(messageView.bottomAnchor.constraint(equalTo: window.bottomAnchor, constant: -(margin - safeArea.top + safeArea.bottom)))
+            } else {
+                // Center
+                constraints.append(messageView.centerYAnchor.constraint(equalTo: window.centerYAnchor))
+            }
+            
+        case .horizontal:
+            // Horizontal - full width with placement (respecting safe area)
+            constraints = [
+                messageView.leadingAnchor.constraint(equalTo: window.leadingAnchor, constant: safeArea.left),
+                messageView.trailingAnchor.constraint(equalTo: window.trailingAnchor, constant: -safeArea.right)
+            ]
+            
+            // Handle placement
+            let placement = message.layout.placement.lowercased()
+            if placement.contains("top") {
+                constraints.append(messageView.topAnchor.constraint(equalTo: window.topAnchor, constant: safeArea.top))
+            } else if placement.contains("bottom") {
+                constraints.append(messageView.bottomAnchor.constraint(equalTo: window.bottomAnchor, constant: -safeArea.bottom))
+            } else {
+                // Center
+                constraints.append(messageView.centerYAnchor.constraint(equalTo: window.centerYAnchor))
+            }
+        }
+        
+        NSLayoutConstraint.activate(constraints)
+    }
+    
     /// Setup action button targets recursively
     private func setupActionTargets(in view: UIView) {
         for subview in view.subviews {
@@ -277,23 +352,41 @@ public class InAppMessageDisplayer {
     
     // MARK: - Layout & Constraints
     
-    /// Setup overlay view
-    private func setupOverlay(in viewController: UIViewController) {
+    /// Get the appropriate container view to avoid SwiftUI warnings
+    /// - Returns: UIWindow if available and using SwiftUI, otherwise viewController.view
+    private func getContainerView(for viewController: UIViewController) -> UIView {
+        // Check if we're dealing with UIHostingController (SwiftUI)
+        let isHostingController = String(describing: type(of: viewController)).contains("HostingController")
+        
+        if isHostingController, let window = viewController.view.window {
+            // For SwiftUI, add to window to avoid hierarchy warnings
+            InAppLogger.shared.debug("Using window container for SwiftUI compatibility")
+            return window
+        }
+        
+        // For UIKit, use viewController.view
+        return viewController.view
+    }
+    
+    /// Setup overlay view below the message
+    private func setupOverlay(in containerView: UIView, below messageView: UIView) {
         let overlay = UIView()
         overlay.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        overlay.alpha = 0 // Start invisible for animation
         overlay.translatesAutoresizingMaskIntoConstraints = false
         
         // Add tap gesture to dismiss on outside tap
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(overlayTapped))
         overlay.addGestureRecognizer(tapGesture)
         
-        viewController.view.insertSubview(overlay, at: 0)
+        // Insert overlay below the message view
+        containerView.insertSubview(overlay, belowSubview: messageView)
         
         NSLayoutConstraint.activate([
-            overlay.topAnchor.constraint(equalTo: viewController.view.topAnchor),
-            overlay.leadingAnchor.constraint(equalTo: viewController.view.leadingAnchor),
-            overlay.trailingAnchor.constraint(equalTo: viewController.view.trailingAnchor),
-            overlay.bottomAnchor.constraint(equalTo: viewController.view.bottomAnchor)
+            overlay.topAnchor.constraint(equalTo: containerView.topAnchor),
+            overlay.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            overlay.bottomAnchor.constraint(equalTo: containerView.bottomAnchor)
         ])
         
         overlayView = overlay

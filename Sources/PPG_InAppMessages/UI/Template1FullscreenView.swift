@@ -20,21 +20,10 @@ public class Template1FullscreenView {
             containerView.layer.borderWidth = CGFloat(message.style.borderWidth)
             containerView.layer.borderColor = UIColor(hex: message.style.borderColor).cgColor
         }
-        
-        // Apply drop shadow if enabled
-        if message.style.dropShadow {
-            containerView.layer.shadowColor = UIColor.black.cgColor
-            containerView.layer.shadowOffset = CGSize(width: 0, height: 4)
-            containerView.layer.shadowOpacity = 0.3
-            containerView.layer.shadowRadius = 8
-            containerView.layer.masksToBounds = false
-        } else {
-            containerView.clipsToBounds = true
-        }
-        
+        containerView.clipsToBounds = true
         containerView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Create main stack - layout depends on image visibility
+        // Main container - vertical stack: image (50%) + content (50%)
         let mainStack = UIStackView()
         mainStack.axis = .vertical
         mainStack.spacing = CGFloat(message.layout.spaceBetweenImageAndBody)
@@ -80,6 +69,7 @@ public class Template1FullscreenView {
     /// Create image section (top 50%)
     private static func createImageSection(for message: InAppMessage) -> UIView {
         let sectionView = UIView()
+        sectionView.translatesAutoresizingMaskIntoConstraints = false
         
         // Apply corner radius to section (only top corners for top section)
         let borderRadius = UIStyleParser.parseBorderRadius(message.style.borderRadius)

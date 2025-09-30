@@ -263,8 +263,5 @@ public class Template3HorizontalView {
         }
         
         NSLayoutConstraint.activate(constraints)
-        
-        let positionDesc = isTop ? "top" : (isBottom ? "bottom" : "centered")
-        InAppLogger.shared.info("↔️ Template 3 Horizontal Review: \(screenWidth)px full-width (ignoring margin), \(positionDesc), 68px image + flexible text + 35% actions")
     }
 }

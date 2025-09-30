@@ -91,7 +91,6 @@ public class FontManager {
         let fontName = buildSystemFontName(family: family, weight: weight, style: style)
         
         if let font = UIFont(name: fontName, size: size) {
-            InAppLogger.shared.info("✅ System font: \(fontName)")
             return font
         }
         
@@ -104,7 +103,6 @@ public class FontManager {
         let fontName = buildBundledFontName(family: family, weight: weight, style: style)
         
         if let font = UIFont(name: fontName, size: size) {
-            InAppLogger.shared.info("✅ Bundled font: \(fontName)")
             return font
         }
         
@@ -244,7 +242,7 @@ public class FontManager {
             registerFontFamily(family, structure: structure)
         }
         
-        InAppLogger.shared.info("🔤 Registered \(registeredFonts.count) fonts total")
+        InAppLogger.shared.debug("Registered \(registeredFonts.count) fonts")
     }
     
     private func registerFontFamily(_ family: String, structure: FontStructure) {
@@ -337,7 +335,7 @@ public class FontManager {
             
             // Ignore "already registered" errors: 105 = already registered, 305 = font exists
             if code != 105 && code != 305 {
-                InAppLogger.shared.info("⚠️ Font registration failed: \(CFErrorCopyDescription(cfError) ?? "" as CFString)")
+                InAppLogger.shared.debug("Font registration failed: \(CFErrorCopyDescription(cfError) ?? "" as CFString)")
             }
         }
     }
