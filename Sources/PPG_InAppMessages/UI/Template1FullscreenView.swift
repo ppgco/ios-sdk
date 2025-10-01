@@ -1,6 +1,3 @@
-// Template1FullscreenView.swift
-// Fullscreen template (TOP/BOTTOM placement) - Image 50%, Content 50%
-
 import Foundation
 import UIKit
 

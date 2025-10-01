@@ -1,14 +1,9 @@
-// InAppMessageRepository.swift
-// iOS equivalent of Android InAppMessageRepository.kt
-// Reference: Android InAppMessageRepository.kt and API handling
-
 import Foundation
 
 /// Repository class for handling API communication for in-app messages
-/// Reference: Android InAppMessageRepository pattern
 public class InAppMessageRepository {
     
-    // MARK: - Properties
+    // Properties
     private let apiKey: String
     private let projectId: String
     private let isProduction: Bool
@@ -16,12 +11,12 @@ public class InAppMessageRepository {
     private let session: URLSession
     private let cache: InAppMessageCache
     
-    // API endpoints - reference Android API configuration
+    // API endpoints
     private var baseURL: String {
         return isProduction ? "https://api.pushpushgo.com" : "https://api.master1.qappg.co"
     }
     
-    // MARK: - Initialization
+    // Initialization
     public init(apiKey: String, projectId: String, isProduction: Bool = true, cache: InAppMessageCache? = nil) {
         self.apiKey = apiKey
         self.projectId = projectId
@@ -30,7 +25,7 @@ public class InAppMessageRepository {
         self.cache = cache ?? InAppMessageCache()
     }
     
-    // MARK: - Public Methods
+    // Public Methods
     
     /// Fetch active in-app messages from API with ETag caching
     /// - Returns: Array of InAppMessage objects
@@ -139,7 +134,6 @@ public class InAppMessageRepository {
     }
     
     /// Dispatch event to analytics API
-    /// Reference: Android dispatchEvent() method with CRITICAL FIX
     /// - Parameters:
     ///   - eventType: Type of event (inapp.show, inapp.close, inapp.cta.X)
     ///   - messageId: ID of the message
@@ -215,7 +209,7 @@ public class InAppMessageRepository {
     }
 }
 
-// MARK: - Repository Errors
+// Repository Errors
 public enum RepositoryError: Error, LocalizedError {
     case invalidURL
     case invalidResponse

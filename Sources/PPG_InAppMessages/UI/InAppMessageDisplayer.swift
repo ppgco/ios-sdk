@@ -1,6 +1,3 @@
-// InAppMessageDisplayer.swift
-// Native iOS implementation of in-app message display using template system
-
 import Foundation
 import UIKit
 
@@ -17,7 +14,7 @@ private class ShadowContainerView: UIView {
 /// InAppMessageDisplayer handles the UI presentation logic and coordinates with template views
 public class InAppMessageDisplayer {
     
-    // MARK: - Properties
+    // Properties
     private let tag = "InAppMessageDisplayer"
     
     // Callbacks
@@ -37,7 +34,7 @@ public class InAppMessageDisplayer {
     // State management
     private var isDismissing = false
     
-    // MARK: - Template Types
+    // Template Types
     private enum TemplateType {
         case fullscreen  // Template 1
         case desktop     // Template 2 
@@ -65,7 +62,7 @@ public class InAppMessageDisplayer {
         }
     }
     
-    // MARK: - Initialization
+    // Initialization
     
     public init(
         onMessageDismissed: @escaping () -> Void,
@@ -77,7 +74,7 @@ public class InAppMessageDisplayer {
         self.subscriptionHandler = subscriptionHandler
     }
     
-    // MARK: - Public Methods
+    // Public Methods
     
     /// Set handler for custom code actions
     /// This allows the app to handle custom code calls from action buttons
@@ -196,7 +193,7 @@ public class InAppMessageDisplayer {
         dismissMessageInternal(sendCloseEvent: false)
     }
     
-    // MARK: - Template System
+    // Template System
     
     /// Create message view using appropriate template
     private func createTemplateView(for message: InAppMessage, templateType: TemplateType) -> UIView {
@@ -350,7 +347,7 @@ public class InAppMessageDisplayer {
         }
     }
     
-    // MARK: - Layout & Constraints
+    // Layout & Constraints
     
     /// Get the appropriate container view to avoid SwiftUI warnings
     /// - Returns: UIWindow if available and using SwiftUI, otherwise viewController.view
@@ -392,7 +389,7 @@ public class InAppMessageDisplayer {
         overlayView = overlay
     }
     
-    // MARK: - Action Handlers
+    // Action Handlers
     
     @objc private func closeButtonTapped() {
         guard let message = currentMessage else { return }
@@ -523,7 +520,7 @@ public class InAppMessageDisplayer {
         }
     }
     
-    // MARK: - Dismiss Methods
+    // Dismiss Methods
     
     /// Internal dismissal method with event control
     private func dismissMessageInternal(sendCloseEvent: Bool) {

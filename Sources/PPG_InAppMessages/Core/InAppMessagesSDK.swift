@@ -1,16 +1,12 @@
-// InAppMessagesSDK.swift
-// iOS equivalent of InAppMessagesSDK.kt
-// Reference: Android InAppMessagesSDK.kt lines 1-150
-
 import Foundation
 import UIKit
 
 @objc public class InAppMessagesSDK: NSObject {
     
-    // MARK: - Singleton
+    // Singleton
     @objc public static let shared = InAppMessagesSDK()
     
-    // MARK: - Properties
+    // Properties
     private var isInitialized = false
     private var apiKey: String?
     private var projectId: String?
@@ -25,11 +21,8 @@ import UIKit
     // Route tracking for automatic message display
     private var currentRoute: String = ""
     
-    // Bridge to push SDK - equivalent to Android bridge pattern
+    // Bridge to push SDK
     private var subscriptionHandler: PushNotificationSubscriber = DefaultPushNotificationSubscriber()
-    
-    // Background queue for SDK operations - equivalent to Android sdkScope
-    private let sdkQueue = DispatchQueue(label: "InAppMessagesSDK", qos: .background)
     
     private override init() {
         super.init()
@@ -63,14 +56,13 @@ import UIKit
         }
     }
     
-    // MARK: - Public API
+    // Public API
     
     /// Initialize the SDK with API credentials
-    /// Reference: Android initialize() method
     /// - Parameters:
     ///   - apiKey: API key for authentication
     ///   - projectId: Project ID for the app
-    ///   - isProduction: Use production or test environment (default: true)
+    ///   - isProduction: Use production or (PPG)test environment (default: true)
     ///   - isDebug: Enable debug logging (default: false)
     @objc public func initialize(apiKey: String, projectId: String, isProduction: Bool = true, isDebug: Bool = false) {
         // Enable/disable debug logging based on parameter
@@ -84,7 +76,7 @@ import UIKit
         self.apiKey = apiKey
         self.projectId = projectId
         
-        // Initialize core components - equivalent to Android initialization
+        // Initialize core components
         self.repository = InAppMessageRepository(apiKey: apiKey, projectId: projectId, isProduction: isProduction)
         self.messageDisplayer = InAppMessageDisplayer(
             onMessageDismissed: { [weak self] in
@@ -112,7 +104,7 @@ import UIKit
         InAppLogger.shared.debug("Custom code action handler set")
     }
     
-    /// Handle view controller lifecycle - equivalent to Android onActivityResumed
+    /// Handle view controller lifecycle
     @objc public func onViewControllerWillAppear(_ viewController: UIViewController) {
         guard isInitialized else {
             InAppLogger.shared.error("SDK not initialized")
@@ -146,7 +138,6 @@ import UIKit
     }
     
     /// Manually refresh and display eligible messages
-    /// Reference: Android refreshActiveMessages() method
     @objc public func refreshActiveMessages(viewController: UIViewController) async {
         guard isInitialized else {
             InAppLogger.shared.error("SDK not initialized")
@@ -167,7 +158,6 @@ import UIKit
     }
     
     /// Show messages on custom trigger with key-value matching
-    /// Reference: Android custom trigger handling with key-value pairs
     /// - Parameters:
     ///   - key: Custom trigger key to match
     ///   - value: Custom trigger value to match
@@ -241,9 +231,9 @@ import UIKit
         return repository?.getCacheStatus()
     }
     
-    // MARK: - Private Methods
+    // Private Methods
     
-    /// Handle message dismissal - equivalent to Android onMessageDismissed
+    /// Handle message dismissal
     private func onMessageDismissed() {
         // Clear current message from manager to allow new messages
         messageManager?.clearCurrentMessage()
@@ -254,7 +244,7 @@ import UIKit
         // This ensures proper showAfterTime behavior when app is running
     }
     
-    // MARK: - Background Timer
+    // Background Timer
     
     /// Start background timer to check messages every minute
     private func startBackgroundTimer() {
@@ -285,8 +275,7 @@ import UIKit
         backgroundTimer = nil
     }
     
-    /// Handle message events - equivalent to Android onMessageEvent
-    /// Reference: Android event dispatch logic with CRITICAL FIX
+    /// Handle message events
     private func onMessageEvent(_ eventType: String, _ message: InAppMessage, _ ctaIndex: Int?) {
         Task {
             do {

@@ -1,6 +1,3 @@
-// Template2DesktopView.swift
-// Desktop modal template (CENTER placement) - Centered modal with image and content
-
 import Foundation
 import UIKit
 

@@ -1,15 +1,10 @@
-// InAppMessageManager.swift
-// iOS equivalent of Android InAppMessageManager.kt
-// Reference: Android InAppMessageManager business logic and lifecycle management
-
 import Foundation
 import UIKit
 
 /// Manages the lifecycle and business logic of in-app messages
-/// Reference: Android InAppMessageManager pattern
 public class InAppMessageManager {
     
-    // MARK: - Properties
+    // Properties
     private let repository: InAppMessageRepository
     private let statusProvider = PushNotificationStatusProvider()
     private weak var displayer: InAppMessageDisplayer?
@@ -24,7 +19,7 @@ public class InAppMessageManager {
     // Current route for route-based display filtering
     private var currentRoute: String = ""
     
-    // MARK: - Initialization
+    // Initialization
     public init(repository: InAppMessageRepository, displayer: InAppMessageDisplayer? = nil) {
         self.repository = repository
         self.displayer = displayer
@@ -43,10 +38,9 @@ public class InAppMessageManager {
         displayer?.setCustomCodeActionHandler(handler)
     }
     
-    // MARK: - Public Methods
+    // Public Methods
     
     /// Process fetched messages and display eligible ones
-    /// Reference: Android processMessages() method with CRITICAL FIX for audience type logic
     /// - Parameters:
     ///   - messages: Array of messages from API
     ///   - viewController: Current view controller for display
@@ -77,7 +71,6 @@ public class InAppMessageManager {
     }
     
     /// Handle custom trigger events with key-value matching
-    /// Reference: Android handleCustomTrigger() method with key-value pair matching
     /// - Parameters:
     ///   - key: Custom trigger key to match
     ///   - value: Custom trigger value to match  
@@ -169,10 +162,9 @@ public class InAppMessageManager {
         return true // Default behavior for unknown display settings
     }
     
-    // MARK: - Private Methods
+    // Private Methods
     
     /// Filter messages based on eligibility criteria
-    /// Reference: Android message filtering logic with CRITICAL FIXES
     /// - Parameter messages: Raw messages from API
     /// - Parameter skipTriggerCheck: Skip trigger type validation (for custom triggers)
     /// - Returns: Filtered eligible messages
@@ -190,13 +182,13 @@ public class InAppMessageManager {
                 return false
             }
             
-            // CRITICAL FIX: Apply corrected audience type matching logic
+            // Check audience targeting
             guard message.matchesAudience(provider: statusProvider) else {
                 InAppLogger.shared.debug("Message \(message.id) doesn't match audience")
                 return false
             }
             
-            // Check platform targeting - iOS is considered MOBILE platform
+            // Check platform targeting
             guard message.matchesPlatform() else {
                 InAppLogger.shared.debug("Message \(message.id) doesn't match platform")
                 return false
@@ -283,7 +275,7 @@ public class InAppMessageManager {
         markMessageAsDisplayed(message.id)
     }
     
-    // MARK: - Persistence
+    // Persistence
     
     /// Load display history from UserDefaults
     private func loadDisplayHistory() {

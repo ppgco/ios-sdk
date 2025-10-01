@@ -1,14 +1,9 @@
-// InAppMessageCache.swift
-// iOS equivalent of Android InAppMessagePersistence.kt
-// Reference: Android ETag caching implementation
-
 import Foundation
 
 /// Cache management for In-App Messages with ETag support
-/// Reference: Android InAppMessagePersistence with ETag optimization
 public class InAppMessageCache {
     
-    // MARK: - Constants
+    // Constants
     private enum Keys {
         static let etag = "inappmessages_etag"
         static let cachedMessages = "inappmessages_cached_messages"
@@ -22,17 +17,16 @@ public class InAppMessageCache {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     
-    // MARK: - Initialization
+    // Initialization
     public init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
     }
     
-    // MARK: - ETag Cache Management
+    // Tag Cache Management
     
     /// Get stored ETag if cache is not expired
-    /// Reference: Android getStoredETag() with expiry check
     /// - Returns: Stored ETag or nil if expired/not found
     public func getStoredETag() -> String? {
         let timestamp = userDefaults.double(forKey: Keys.cacheTimestamp)
@@ -74,7 +68,6 @@ public class InAppMessageCache {
     }
     
     /// Get cached messages if available
-    /// Reference: Android getCachedMessages() with error handling
     /// - Returns: Cached messages or nil if not found/invalid
     public func getCachedMessages() -> [InAppMessage]? {
         guard let messagesData = userDefaults.data(forKey: Keys.cachedMessages) else {
@@ -93,14 +86,13 @@ public class InAppMessageCache {
     }
     
     /// Clear all cached data
-    /// Reference: Android clearCache() implementation
     public func clearCache() {
         userDefaults.removeObject(forKey: Keys.etag)
         userDefaults.removeObject(forKey: Keys.cachedMessages)
         userDefaults.removeObject(forKey: Keys.cacheTimestamp)
     }
     
-    // MARK: - Debug Helpers
+    // Debug Helpers
     
     /// Get cache status for debugging
     public func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {

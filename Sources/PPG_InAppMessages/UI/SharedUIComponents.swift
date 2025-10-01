@@ -1,16 +1,9 @@
-// SharedUIComponents.swift
-// Shared UI components for all in-app message templates
-
 import Foundation
 import UIKit
 
 /// Shared UI component factory for in-app messages
 public class SharedUIComponents {
-    
-    // MARK: - Helper Methods
-    
-    
-    // MARK: - Button Creation
+    // Button Creation
     
     /// Create close button with style from payload
     public static func createCloseButton(style: MessageStyle) -> UIButton {
@@ -143,7 +136,7 @@ public class SharedUIComponents {
         return button
     }
     
-    // MARK: - Label Creation
+    // Label Creation
     
     /// Create label with common styling logic (shared between title and description)
     private static func createStyledLabel(
@@ -289,7 +282,7 @@ public class SharedUIComponents {
         )
     }
     
-    // MARK: - Image Creation
+    // Image Creation
     
     /// Create image view with async loading
     public static func createImageView(for imageUrl: String, height: CGFloat = 200) -> UIImageView {
@@ -324,7 +317,7 @@ public class SharedUIComponents {
         }
     }
     
-    // MARK: - Actions Container
+    // Actions Container
     
     /// Create actions stack view (vertical for Template 1, horizontal for others)
     public static func createActionsView(for message: InAppMessage, fillWidth: Bool = false) -> UIView {
@@ -412,10 +405,10 @@ public class UIStyleParser {
             return (topLeft: value1, topRight: value2, bottomRight: value1, bottomLeft: value2)
         case 4:
             // Four values: topLeft, topRight, bottomRight, bottomLeft (not CSS order - backend specific)
-            let topLeft = parseFloat(components[0])     // lewy górny
-            let topRight = parseFloat(components[1])    // prawy górny  
-            let bottomRight = parseFloat(components[2]) // prawy dolny
-            let bottomLeft = parseFloat(components[3])  // lewy dolny
+            let topLeft = parseFloat(components[0])
+            let topRight = parseFloat(components[1]) 
+            let bottomRight = parseFloat(components[2])
+            let bottomLeft = parseFloat(components[3])
             return (topLeft: topLeft, topRight: topRight, bottomRight: bottomRight, bottomLeft: bottomLeft)
         default:
             // Invalid format - return zero
@@ -491,7 +484,7 @@ public class UIStyleParser {
     }
 }
 
-// MARK: - UIColor Extension
+// UIColor Extension
 extension UIColor {
     convenience init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

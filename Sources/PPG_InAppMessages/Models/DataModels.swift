@@ -1,11 +1,6 @@
-// DataModels.swift
-// iOS equivalent of Android data models
-// Reference: Android InAppMessage.kt, UserAudienceType.kt, TriggerType.kt, ActionType.kt
-
 import Foundation
 
-// MARK: - InAppMessage
-// Reference: Android InAppMessage.kt
+// InAppMessage
 public struct InAppMessage: Codable {
     public let id: String
     public let name: String
@@ -35,7 +30,7 @@ public struct InAppMessage: Codable {
     public let template: String?
 }
 
-// MARK: - Supporting Structures
+// Supporting Structures
 public struct MessageLayout: Codable {
     public let placement: String // "TOP", "CENTER", "BOTTOM"
     public let margin: String
@@ -94,8 +89,7 @@ public struct MessageAudience: Codable {
     public let platform: String // "ALL", "WEB", "MOBILE"
 }
 
-// MARK: - Route Display Settings
-// Reference: Backend display routing configuration
+// Route Display Settings
 public struct RouteDisplayConfig: Codable {
     public let display: Bool
     public let path: String
@@ -114,8 +108,7 @@ public struct MessageScheduleSettings: Codable {
     public let customTriggerValue: String?
 }
 
-// MARK: - InAppMessageAction
-// Reference: Android InAppMessageAction.kt
+// InAppMessageAction
 public struct InAppMessageAction: Codable {
     public let enabled: Bool
     public let actionType: String // "REDIRECT", "SUBSCRIBE", "CLOSE", "JS"
@@ -133,8 +126,7 @@ public struct InAppMessageAction: Codable {
     public let call: String?
 }
 
-// MARK: - Enums
-// Reference: Android UserAudienceType.kt
+// Enums
 public enum UserAudienceType: String, CaseIterable, Codable {
     case all = "ALL"
     case subscriber = "SUBSCRIBER"
@@ -142,7 +134,6 @@ public enum UserAudienceType: String, CaseIterable, Codable {
     case notificationsBlocked = "NOTIFICATIONS_BLOCKED"
 }
 
-// Reference: Android TriggerType.kt
 public enum TriggerType: String, CaseIterable, Codable {
     case enter = "ENTER"
     case custom = "CUSTOM_TRIGGER"
@@ -150,7 +141,6 @@ public enum TriggerType: String, CaseIterable, Codable {
     case exitIntent = "EXIT_INTENT"
 }
 
-// Reference: Android ActionType.kt
 public enum ActionType: String, CaseIterable, Codable {
     case redirect = "REDIRECT"
     case subscribe = "SUBSCRIBE"
@@ -158,14 +148,12 @@ public enum ActionType: String, CaseIterable, Codable {
     case js = "JS"
 }
 
-// Reference: Android PlatformType.kt
 public enum PlatformType: String, CaseIterable, Codable {
     case all = "ALL"
     case web = "WEB"
     case mobile = "MOBILE"
 }
 
-// Device type targeting for audience filtering
 public enum DeviceType: String, CaseIterable, Codable {
     case all = "ALL"
     case mobile = "MOBILE"
@@ -174,7 +162,6 @@ public enum DeviceType: String, CaseIterable, Codable {
     case others = "OTHERS"
 }
 
-// OS type targeting for audience filtering
 public enum OSType: String, CaseIterable, Codable {
     case all = "ALL"
     case ios = "IOS"
@@ -184,7 +171,7 @@ public enum OSType: String, CaseIterable, Codable {
     case others = "OTHERS"
 }
 
-// MARK: - Event Models
+// Event Models
 public struct InAppEvent: Codable {
     public let eventType: String
     public let messageId: String
@@ -197,7 +184,7 @@ public struct InAppEvent: Codable {
     }
 }
 
-// MARK: - API Response Models
+// API Response Models
 public struct MessagesResponse: Codable {
     public let data: [InAppMessage]
     public let metadata: ResponseMetadata
@@ -212,10 +199,9 @@ public struct EventResponse: Codable {
     public let error: String?
 }
 
-// MARK: - Extensions for convenience
+// Extensions for convenience
 extension InAppMessage {
     /// Check if message matches the given audience type
-    /// Reference: Android PushNotificationStatusProvider.matchesAudienceType()
     public func matchesAudience(provider: PushNotificationStatusProvider) -> Bool {
         guard let audienceType = UserAudienceType(rawValue: audience.userType) else {
             return false
@@ -229,12 +215,10 @@ extension InAppMessage {
     }
     
     /// Check if message matches the current platform (iOS = MOBILE)
-    /// Reference: Android platform checking logic
     public func matchesPlatform() -> Bool {
         guard let platformType = PlatformType(rawValue: audience.platform) else {
             return false
         }
-        // iOS is considered MOBILE platform
         return platformType == .mobile || platformType == .all
     }
     
@@ -246,7 +230,6 @@ extension InAppMessage {
             guard let deviceType = DeviceType(rawValue: deviceString) else {
                 return false
             }
-            // iOS is considered MOBILE device
             return deviceType == .mobile || deviceType == .all
         }
     }

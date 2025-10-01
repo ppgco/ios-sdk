@@ -1,6 +1,3 @@
-// Template3HorizontalView.swift
-// Horizontal template - Image left side, content right side
-
 import Foundation
 import UIKit
 

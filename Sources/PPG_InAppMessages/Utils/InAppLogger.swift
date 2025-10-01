@@ -1,7 +1,3 @@
-// InAppLogger.swift
-// Logger utility for PPG In-App Messages SDK
-// Reference: Android Logger utilities
-
 import Foundation
 import os.log
 
@@ -24,7 +20,7 @@ public class InAppLogger {
         isDebugEnabled = enabled
     }
     
-    // MARK: - Logging Methods
+    // Logging Methods
     
     func debug(_ message: String) {
         if isDebugEnabled {

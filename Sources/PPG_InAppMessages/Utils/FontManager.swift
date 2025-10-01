@@ -5,7 +5,7 @@ import CoreText
 public class FontManager {
     public static let shared = FontManager()
     
-    // MARK: - Properties
+    // Properties
     private var registeredFonts: Set<String> = []
     private let fontCache = NSCache<NSString, UIFont>()
     
@@ -49,13 +49,13 @@ public class FontManager {
         case `static`  // TTF files in /static subfolder
     }
     
-    // MARK: - Initialization
+    // Initialization
     
     private init() {
         registerAllBundledFonts()
     }
     
-    // MARK: - Public API
+    // Public API
     
     /// Load font with backend parameters (weight: 100-900, style: "normal"/"italic")
     public func loadFont(family: String, size: CGFloat, weight: Int, style: String = "normal") -> UIFont {
@@ -70,7 +70,7 @@ public class FontManager {
         return font
     }
     
-    // MARK: - Font Creation
+    // Font Creation
     
     private func createFont(family: String, size: CGFloat, weight: Int, style: String) -> UIFont {
         // System fonts (only Arial, Georgia)
@@ -141,11 +141,11 @@ public class FontManager {
         return nil
     }
     
-    // MARK: - Font Name Building
+    // Font Name Building
     
     private func buildSystemFontName(family: String, weight: Int, style: String) -> String {
         let isItalic = style.lowercased() == "italic"
-        let isBold = weight >= 700
+        let isBold = weight >= 500
         
         switch family {
         case "Arial":
@@ -235,7 +235,7 @@ public class FontManager {
         }
     }
     
-    // MARK: - Font Registration
+    // Font Registration
     
     private func registerAllBundledFonts() {
         for (family, structure) in fontStructures {
@@ -348,7 +348,7 @@ public class FontManager {
         #endif
     }
     
-    // MARK: - Cache Management
+    // Cache Management
     
     public func clearCache() {
         fontCache.removeAllObjects()
