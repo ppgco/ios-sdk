@@ -104,12 +104,12 @@ import UIKit
         InAppLogger.shared.info("InAppMessagesSDK initialized successfully")
     }
     
-    /// Set handler for JS actions from in-app message buttons
+    /// Set handler for custom code actions from in-app message buttons
     /// This allows the app to handle custom code calls from action buttons
-    /// - Parameter handler: Function that takes JS call string and processes it
-    @objc public func setJsActionHandler(_ handler: @escaping (String) -> Void) {
-        messageManager?.setJsActionHandler(handler)
-        InAppLogger.shared.debug("JS action handler set")
+    /// - Parameter handler: Function that takes custom code string and processes it
+    @objc public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
+        messageManager?.setCustomCodeActionHandler(handler)
+        InAppLogger.shared.debug("Custom code action handler set")
     }
     
     /// Handle view controller lifecycle - equivalent to Android onActivityResumed

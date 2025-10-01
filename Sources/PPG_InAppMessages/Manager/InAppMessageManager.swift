@@ -36,11 +36,11 @@ public class InAppMessageManager {
         self.displayer = displayer
     }
     
-    /// Set handler for JS actions from in-app message buttons
+    /// Set handler for custom code actions from in-app message buttons
     /// This allows the app to handle custom code calls from action buttons
-    /// - Parameter handler: Function that takes JS call string and processes it
-    public func setJsActionHandler(_ handler: @escaping (String) -> Void) {
-        displayer?.setJsActionHandler(handler)
+    /// - Parameter handler: Function that takes custom code string and processes it
+    public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
+        displayer?.setCustomCodeActionHandler(handler)
     }
     
     // MARK: - Public Methods

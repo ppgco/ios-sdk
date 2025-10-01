@@ -25,8 +25,8 @@ public class InAppMessageDisplayer {
     private let onMessageEvent: (String, InAppMessage, Int?) -> Void
     private let subscriptionHandler: PushNotificationSubscriber
     
-    // JS action handler (optional)
-    private var jsActionHandler: ((String) -> Void)?
+    // Custom code action handler (optional)
+    private var customCodeActionHandler: ((String) -> Void)?
     
     // Current display state
     private var currentMessageView: UIView?
@@ -79,11 +79,11 @@ public class InAppMessageDisplayer {
     
     // MARK: - Public Methods
     
-    /// Set handler for JS actions
+    /// Set handler for custom code actions
     /// This allows the app to handle custom code calls from action buttons
-    /// - Parameter handler: Function that takes JS call string and processes it
-    public func setJsActionHandler(_ handler: @escaping (String) -> Void) {
-        self.jsActionHandler = handler
+    /// - Parameter handler: Function that takes custom code string and processes it
+    public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
+        self.customCodeActionHandler = handler
     }
     
     /// Show message using appropriate template
@@ -443,10 +443,10 @@ public class InAppMessageDisplayer {
                     handleSubscribeAction()
                     return // Don't dismiss yet - handleSubscribeAction will dismiss
                 case .js:
-                    if let jsCall = action.call, !jsCall.isEmpty {
-                        handleJsAction(jsCall)
+                    if let customCode = action.call, !customCode.isEmpty {
+                        handleCustomCodeAction(customCode)
                     } else {
-                        InAppLogger.shared.error("JS action missing call")
+                        InAppLogger.shared.error("Custom code action missing call")
                     }
                 }
             } else {
@@ -500,13 +500,13 @@ public class InAppMessageDisplayer {
         }
     }
     
-    /// Handle JS action by calling the provided handler
-    private func handleJsAction(_ jsCall: String) {
-        if let handler = jsActionHandler {
-            handler(jsCall)
-            InAppLogger.shared.debug("JS action executed")
+    /// Handle custom code action by calling the provided handler
+    private func handleCustomCodeAction(_ customCode: String) {
+        if let handler = customCodeActionHandler {
+            handler(customCode)
+            InAppLogger.shared.debug("Custom code action executed")
         } else {
-            InAppLogger.shared.debug("No JS action handler provided")
+            InAppLogger.shared.debug("No custom code action handler provided")
         }
     }
     
