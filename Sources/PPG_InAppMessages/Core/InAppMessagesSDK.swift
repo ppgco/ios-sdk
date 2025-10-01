@@ -195,7 +195,7 @@ import UIKit
     }
     
     /// Notify SDK about route change and check for route-specific messages
-    /// This updates the current route and checks for messages if view controller is available
+    /// The SDK will automatically find the current view controller and display eligible messages
     /// - Parameters:
     ///   - route: New route path (e.g., "home", "product-detail", "checkout")
     @objc public func onRouteChanged(_ route: String) {
@@ -206,12 +206,21 @@ import UIKit
         
         InAppLogger.shared.debug("Route changed to: '\(route)'")
         
-        // Only refresh messages if we have a current view controller
-        // This avoids duplication with onViewControllerWillAppear() during app startup
-        if let viewController = currentViewController {
-            Task {
-                await refreshActiveMessages(viewController: viewController)
-            }
+        // Try to get view controller - first from stored, then find automatically
+        let viewController = currentViewController ?? findCurrentViewController()
+        
+        guard let viewController = viewController else {
+            InAppLogger.shared.error("Cannot display messages - no view controller found")
+            return
+        }
+        
+        // Store for future use and start background timer
+        currentViewController = viewController
+        startBackgroundTimer()
+        
+        // Refresh and display eligible messages
+        Task {
+            await refreshActiveMessages(viewController: viewController)
         }
     }
     
