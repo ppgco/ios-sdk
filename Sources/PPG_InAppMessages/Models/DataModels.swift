@@ -188,13 +188,11 @@ public enum OSType: String, CaseIterable, Codable {
 public struct InAppEvent: Codable {
     public let eventType: String
     public let messageId: String
-    public let userId: String?
     public let timestamp: Date
     
-    public init(eventType: String, messageId: String, userId: String? = nil) {
+    public init(eventType: String, messageId: String) {
         self.eventType = eventType
         self.messageId = messageId
-        self.userId = userId
         self.timestamp = Date()
     }
 }

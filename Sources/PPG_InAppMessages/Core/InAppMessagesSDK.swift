@@ -17,7 +17,6 @@ import UIKit
     private var repository: InAppMessageRepository?
     private var messageManager: InAppMessageManager?
     private var messageDisplayer: InAppMessageDisplayer?
-    private var userId: String = ""
     
     // Background timer for periodic message checking
     private var backgroundTimer: Timer?
@@ -105,12 +104,6 @@ import UIKit
         InAppLogger.shared.info("InAppMessagesSDK initialized successfully")
     }
     
-    /// Set user ID for message targeting
-    @objc public func setUserId(_ userId: String) {
-        self.userId = userId
-        InAppLogger.shared.debug("User ID set: \(userId)")
-    }
-    
     /// Set handler for JS actions from in-app message buttons
     /// This allows the app to handle custom code calls from action buttons
     /// - Parameter handler: Function that takes JS call string and processes it
@@ -162,7 +155,7 @@ import UIKit
         
         do {
             // Fetch messages from API
-            let messages = try await repository?.getMessages(userId: userId ?? "") ?? []
+            let messages = try await repository?.getMessages() ?? []
             InAppLogger.shared.debug("Received \(messages.count) messages from API")
             
             // Filter and display eligible messages

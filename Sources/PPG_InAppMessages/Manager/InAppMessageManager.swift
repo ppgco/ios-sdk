@@ -86,7 +86,7 @@ public class InAppMessageManager {
         InAppLogger.shared.debug("Custom trigger: key='\(key)', value='\(value)'")
         
         do {
-            let messages = try await repository.getMessages(userId: "")
+            let messages = try await repository.getMessages()
             
             let customTriggerMessages = messages.filter { message in
                 // Check if message has custom trigger type

@@ -33,10 +33,8 @@ public class InAppMessageRepository {
     // MARK: - Public Methods
     
     /// Fetch active in-app messages from API with ETag caching
-    /// Reference: Android getMessages() method with ETag optimization
-    /// - Parameter userId: User ID for message targeting
     /// - Returns: Array of InAppMessage objects
-    public func getMessages(userId: String) async throws -> [InAppMessage] {
+    public func getMessages() async throws -> [InAppMessage] {
         // Get stored ETag for cache validation
         let storedETag = cache.getStoredETag()
         
