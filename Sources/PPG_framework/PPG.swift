@@ -106,6 +106,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ApiService.shared.unsubscribeUser { result in
             if case .success = result {
                 SharedData.shared.deviceToken = ""
+                SharedData.shared.subscriberId = ""
             }
 
             handler(result)
