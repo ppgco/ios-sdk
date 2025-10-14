@@ -114,7 +114,7 @@ public class Template1FullscreenView {
         // Create vertical stack for content with proper spacing from layout
         let contentStack = UIStackView()
         contentStack.axis = .vertical
-        contentStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
+        contentStack.spacing = 0
         contentStack.alignment = .fill  // Changed to .fill for full width buttons
         contentStack.distribution = .fill
         contentStack.translatesAutoresizingMaskIntoConstraints = false
@@ -126,6 +126,11 @@ public class Template1FullscreenView {
         if let title = message.title {
             let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl, forceFullWidth: forceFullWidth)
             contentStack.addArrangedSubview(titleLabel)
+            
+            // Apply custom spacing after title (only if description exists)
+            if message.description != nil {
+                contentStack.setCustomSpacing(CGFloat(message.layout.spaceBetweenTitleAndDescription), after: titleLabel)
+            }
         }
         
         // Add description with font family

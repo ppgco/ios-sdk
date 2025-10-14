@@ -137,7 +137,7 @@ public class Template3HorizontalView {
         
         let textStack = UIStackView()
         textStack.axis = .vertical
-        textStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
+        textStack.spacing = 0
         textStack.alignment = .fill
         textStack.distribution = .fill  // Allow flexible height based on content
         textStack.translatesAutoresizingMaskIntoConstraints = false
@@ -149,6 +149,11 @@ public class Template3HorizontalView {
             titleLabel.setContentHuggingPriority(.defaultHigh, for: .vertical)
             
             textStack.addArrangedSubview(titleLabel)
+            
+            // Apply custom spacing after title (only if description exists)
+            if message.description != nil {
+                textStack.setCustomSpacing(CGFloat(message.layout.spaceBetweenTitleAndDescription), after: titleLabel)
+            }
         }
         
         // Add description with font family (flexible height)

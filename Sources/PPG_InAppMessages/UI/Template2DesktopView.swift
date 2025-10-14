@@ -90,7 +90,7 @@ public class Template2DesktopView {
         
         let contentStack = UIStackView()
         contentStack.axis = .vertical
-        contentStack.spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
+        contentStack.spacing = 0
         contentStack.alignment = .fill
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         contentStack.clipsToBounds = true
@@ -99,6 +99,11 @@ public class Template2DesktopView {
         if let title = message.title {
             let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
             contentStack.addArrangedSubview(titleLabel)
+            
+            // Apply custom spacing after title (only if description exists)
+            if message.description != nil {
+                contentStack.setCustomSpacing(CGFloat(message.layout.spaceBetweenTitleAndDescription), after: titleLabel)
+            }
         }
         
         // Add description with font family
