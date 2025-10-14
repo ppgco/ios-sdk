@@ -159,12 +159,12 @@ public class Template1FullscreenView {
                 contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingValues.right)
             ])
         } else {
-            // When paddingBody has values, apply exact padding and center vertically
+            // When paddingBody has values, apply all four sides padding (no centering)
             NSLayoutConstraint.activate([
-                contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
-                contentStack.centerYAnchor.constraint(equalTo: sectionView.centerYAnchor),
+                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: paddingBody.top),
                 contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingBody.left),
-                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right)
+                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right),
+                contentStack.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor, constant: -paddingBody.bottom)
             ])
         }
         

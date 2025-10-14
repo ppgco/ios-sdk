@@ -379,6 +379,11 @@ public class InAppMessageDisplayer {
         // Insert overlay below the message view
         containerView.insertSubview(overlay, belowSubview: messageView)
         
+        // Set zPosition for overlay (one level below message)
+        if let message = currentMessage {
+            overlay.layer.zPosition = CGFloat(message.style.zIndex - 1)
+        }
+        
         NSLayoutConstraint.activate([
             overlay.topAnchor.constraint(equalTo: containerView.topAnchor),
             overlay.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
