@@ -70,17 +70,11 @@ public class Template1FullscreenView {
         let sectionView = UIView()
         sectionView.translatesAutoresizingMaskIntoConstraints = false
         
-        // Apply corner radius to section (only top corners for top section)
-        let borderRadius = UIStyleParser.parseBorderRadius(message.style.borderRadius)
-        sectionView.layer.cornerRadius = max(borderRadius.topLeft, borderRadius.topRight)
-        sectionView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        sectionView.clipsToBounds = true
-        
         if let image = message.image, !image.url.isEmpty {
             if let imageData = message.image, !imageData.hideOnMobile {
                 let imageUIView = SharedUIComponents.createImageView(for: imageData.url)
                 imageUIView.translatesAutoresizingMaskIntoConstraints = false
-                imageUIView.backgroundColor = UIColor.systemGray6 // Fallback background
+                imageUIView.backgroundColor = UIColor(hex: message.style.backgroundColor) // Match message background
                 sectionView.addSubview(imageUIView)
                 
                 NSLayoutConstraint.activate([
@@ -105,6 +99,7 @@ public class Template1FullscreenView {
     private static func createContentSection(for message: InAppMessage) -> UIView {
         let sectionView = UIView()
         sectionView.translatesAutoresizingMaskIntoConstraints = false
+        sectionView.backgroundColor = UIColor(hex: message.style.backgroundColor) // Match message background
         
         // Apply paddingBody to content section first
         let paddingBody = UIStyleParser.parsePaddingString(message.layout.paddingBody)
