@@ -214,29 +214,32 @@ public class InAppMessageDisplayer {
         
         messageView.addSubview(closeButton)
         
+        // Close button stays at fixed offset from edge (border is part of messageView)
+        let offset: CGFloat = 0
+        
         // For Template 1 (fullscreen), position relative to image section
         if let message = currentMessage, TemplateType.from(message.template) == .fullscreen {
             // Find the main stack and get the first arranged subview (image section)
             if let mainStack = findMainStack(in: messageView),
                let imageSection = mainStack.arrangedSubviews.first {
                 NSLayoutConstraint.activate([
-                    closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: 10),
-                    closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -10)
+                    closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: offset),
+                    closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -offset)
                     // Size constraints already set in createCloseButton()
                 ])
             } else {
                 // Fallback to messageView if we can't find the image section
                 NSLayoutConstraint.activate([
-                    closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: 10),
-                    closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10)
+                    closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
+                    closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
                     // Size constraints already set in createCloseButton()
                 ])
             }
         } else {
             // For other templates, position relative to messageView
             NSLayoutConstraint.activate([
-                closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: 10),
-                closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -10)
+                closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
+                closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
                 // Size constraints already set in createCloseButton()
             ])
         }

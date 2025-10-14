@@ -51,13 +51,15 @@ public class Template1FullscreenView {
         
         containerView.addSubview(mainStack)
         
-        // Apply padding to main stack
+        // Apply padding to main stack, accounting for border width
         let padding = UIStyleParser.parsePaddingString(message.layout.padding)
+        let borderWidth = message.style.border ? CGFloat(message.style.borderWidth) : 0
+        
         NSLayoutConstraint.activate([
-            mainStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding.top),
-            mainStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding.left),
-            mainStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -padding.right),
-            mainStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -padding.bottom)
+            mainStack.topAnchor.constraint(equalTo: containerView.topAnchor, constant: padding.top + borderWidth),
+            mainStack.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: padding.left + borderWidth),
+            mainStack.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -(padding.right + borderWidth)),
+            mainStack.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -(padding.bottom + borderWidth))
         ])
         
         return containerView
