@@ -138,7 +138,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             if case .success = result {
                 SharedData.shared.deviceToken = ""
                 SharedData.shared.subscriberId = ""
-                // Successfully unsubscribed - update status
+                // Update status - bridge for in app messages
                 SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
             }
 
