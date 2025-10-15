@@ -151,15 +151,29 @@ public class InAppMessageManager {
         
         // If display is "selected", check displayOn array
         if display.lowercased() == "selected" {
+            // Check if current route is explicitly configured
             for routeConfig in displayOn {
-                if routeConfig.path == route && routeConfig.display {
-                    return true
+                if routeConfig.path == route {
+                    // Found exact route match - return its display setting
+                    return routeConfig.display
                 }
             }
-            return false
+            
+            // Route not found in displayOn array
+            // Determine mode: if ANY route has display=true, it's "show mode" (whitelist)
+            // Otherwise it's "hide mode" (blacklist)
+            let isShowMode = displayOn.contains { $0.display == true }
+            
+            if isShowMode {
+                // Show mode: only show on specified routes
+                return false
+            } else {
+                // Hide mode: hide only on specified routes, show everywhere else
+                return true
+            }
         }
         
-        return true // Default behavior for unknown display settings
+        return true
     }
     
     // Private Methods
