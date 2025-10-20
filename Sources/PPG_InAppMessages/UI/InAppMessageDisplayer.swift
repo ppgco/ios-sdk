@@ -143,10 +143,9 @@ public class InAppMessageDisplayer {
         // Add final view (either messageView or shadowContainer) to container
         containerView.addSubview(finalView)
         
-        // Setup overlay for modal templates AFTER adding finalView
-        if message.style.overlay {
-            setupOverlay(in: containerView, below: finalView)
-        }
+        // ALWAYS setup tap area (overlay or invisible) to allow dismissal
+        // When overlay is disabled, use invisible tap area for outside clicks
+        setupOverlay(in: containerView, below: finalView, visible: message.style.overlay)
         
         // Apply zIndex from style
         finalView.layer.zPosition = CGFloat(message.style.zIndex)
@@ -378,14 +377,28 @@ public class InAppMessageDisplayer {
         return viewController.view
     }
     
-    /// Setup overlay view below the message
-    private func setupOverlay(in containerView: UIView, below messageView: UIView) {
+    /// Setup overlay view below the message (visible darkening or invisible tap area)
+    /// - Parameters:
+    ///   - containerView: Container to add overlay to
+    ///   - messageView: Message view to position below
+    ///   - visible: If true, shows dark overlay (0.5 alpha). If false, invisible but still tappable
+    private func setupOverlay(in containerView: UIView, below messageView: UIView, visible: Bool) {
         let overlay = UIView()
-        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.5)
-        overlay.alpha = 0 // Start invisible for animation
         overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.isUserInteractionEnabled = true // Enable touch events
         
-        // Add tap gesture to dismiss on outside tap
+        if visible {
+            // Visible overlay - dark background
+            overlay.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+            overlay.alpha = 0 // Start invisible for animation (will animate to 1)
+        } else {
+            // Invisible tap area - completely transparent but still captures taps
+            overlay.backgroundColor = UIColor.clear
+            overlay.alpha = 1 // Always visible (but transparent)
+            InAppLogger.shared.debug("Using invisible tap area (overlay disabled)")
+        }
+        
+        // Add tap gesture to dismiss on outside tap (silently - no close event)
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(overlayTapped))
         overlay.addGestureRecognizer(tapGesture)
         
@@ -475,7 +488,8 @@ public class InAppMessageDisplayer {
     }
     
     @objc private func overlayTapped() {
-        dismissMessage()
+        InAppLogger.shared.debug("Overlay tapped - dismissing silently (no close event)")
+        dismissMessageSilently()
     }
     
     /// Handle subscribe action using bridge pattern
