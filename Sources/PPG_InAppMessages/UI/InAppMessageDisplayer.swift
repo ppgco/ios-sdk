@@ -217,40 +217,50 @@ public class InAppMessageDisplayer {
         // Close button stays at fixed offset from edge (border is part of messageView)
         let offset: CGFloat = 0
         
-        // For Template 1 (fullscreen), position relative to image section
-        if let message = currentMessage, TemplateType.from(message.template) == .fullscreen {
-            // Find the main stack and get the first arranged subview (image section)
-            if let mainStack = findMainStack(in: messageView),
-               let imageSection = mainStack.arrangedSubviews.first {
+        guard let message = currentMessage else { return }
+        let templateType = TemplateType.from(message.template)
+        
+        // For all templates, try to position relative to inner content (mainStack)
+        // This ensures the X button is inside the border, not under it
+        if let mainStack = findMainStack(in: messageView) {
+            switch templateType {
+            case .fullscreen:
+                // Template 1: Position relative to image section (top of vertical stack)
+                if let imageSection = mainStack.arrangedSubviews.first {
+                    NSLayoutConstraint.activate([
+                        closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: offset),
+                        closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -offset)
+                    ])
+                } else {
+                    // Fallback to mainStack
+                    NSLayoutConstraint.activate([
+                        closeButton.topAnchor.constraint(equalTo: mainStack.topAnchor, constant: offset),
+                        closeButton.trailingAnchor.constraint(equalTo: mainStack.trailingAnchor, constant: -offset)
+                    ])
+                }
+                
+            case .desktop, .horizontal:
+                // Template 2 & 3: Position relative to mainStack (horizontal layout)
                 NSLayoutConstraint.activate([
-                    closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: offset),
-                    closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -offset)
-                    // Size constraints already set in createCloseButton()
-                ])
-            } else {
-                // Fallback to messageView if we can't find the image section
-                NSLayoutConstraint.activate([
-                    closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
-                    closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
-                    // Size constraints already set in createCloseButton()
+                    closeButton.topAnchor.constraint(equalTo: mainStack.topAnchor, constant: offset),
+                    closeButton.trailingAnchor.constraint(equalTo: mainStack.trailingAnchor, constant: -offset)
                 ])
             }
         } else {
-            // For other templates, position relative to messageView
+            // Fallback: position relative to messageView (shouldn't happen)
             NSLayoutConstraint.activate([
                 closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
                 closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
-                // Size constraints already set in createCloseButton()
             ])
         }
     }
     
-    /// Helper method to find the main stack in Template 1
+    /// Helper method to find the main stack in any template
+    /// All templates have a UIStackView as the main content container
     private func findMainStack(in view: UIView) -> UIStackView? {
+        // The main stack is always the first direct UIStackView subview
         for subview in view.subviews {
-            if let stackView = subview as? UIStackView,
-               stackView.axis == .vertical,
-               stackView.arrangedSubviews.count == 2 {
+            if let stackView = subview as? UIStackView {
                 return stackView
             }
         }
