@@ -191,6 +191,9 @@ import UIKit
     @objc public func onRouteChanged(_ route: String) {
         currentRoute = route
         
+        // Clear any pending messages from previous route
+        messageManager?.clearQueue()
+        
         // CRITICAL: Update manager's current route for filtering
         messageManager?.setCurrentRoute(route)
         

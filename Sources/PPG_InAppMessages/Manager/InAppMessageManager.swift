@@ -12,6 +12,10 @@ public class InAppMessageManager {
     // Current message state
     private var currentlyDisplayedMessage: InAppMessage?
     
+    // Message queue for sequential display
+    private var messageQueue: [InAppMessage] = []
+    private weak var currentViewController: UIViewController?
+    
     // Display history for "show again" logic - now with timestamps
     private var displayHistory: [String: TimeInterval] = [:]
     private let displayHistoryKey = "InAppMessageDisplayHistory"
@@ -48,10 +52,8 @@ public class InAppMessageManager {
     public func processMessages(_ messages: [InAppMessage], viewController: UIViewController, skipTriggerCheck: Bool = false) async {
         InAppLogger.shared.debug("Processing \(messages.count) messages")
         
-        guard currentlyDisplayedMessage == nil else {
-            InAppLogger.shared.debug("Message already displayed, skipping")
-            return
-        }
+        // Store view controller for queue processing
+        currentViewController = viewController
         
         // Filter messages based on eligibility criteria
         let eligibleMessages = await filterEligibleMessages(messages, skipTriggerCheck: skipTriggerCheck)
@@ -63,10 +65,18 @@ public class InAppMessageManager {
             return leftPriority < rightPriority
         }
         
-        if let message = sortedMessages.first {
-            await displayMessage(message, viewController: viewController)
-        } else {
+        if sortedMessages.isEmpty {
             InAppLogger.shared.debug("No eligible messages to display")
+            return
+        }
+        
+        // Add all eligible messages to queue
+        messageQueue.append(contentsOf: sortedMessages)
+        InAppLogger.shared.debug("Added \(sortedMessages.count) messages to queue (total: \(messageQueue.count))")
+        
+        // Display first message if nothing is currently showing
+        if currentlyDisplayedMessage == nil {
+            await displayNextInQueue()
         }
     }
     
@@ -122,9 +132,48 @@ public class InAppMessageManager {
         InAppLogger.shared.debug("Message \(messageId) marked as displayed")
     }
     
-    /// Clear currently displayed message
+    /// Clear currently displayed message and show next in queue
     public func clearCurrentMessage() {
+        InAppLogger.shared.debug("Clearing current message")
         currentlyDisplayedMessage = nil
+        
+        // Display next message in queue
+        Task {
+            await displayNextInQueue()
+        }
+    }
+    
+    /// Display next message from queue
+    private func displayNextInQueue() async {
+        guard currentlyDisplayedMessage == nil else {
+            InAppLogger.shared.debug("Cannot display next - message already showing")
+            return
+        }
+        
+        guard !messageQueue.isEmpty else {
+            InAppLogger.shared.debug("Queue is empty - no more messages to display")
+            return
+        }
+        
+        guard let viewController = currentViewController else {
+            InAppLogger.shared.debug("No view controller available for queue")
+            messageQueue.removeAll()
+            return
+        }
+        
+        // Get next message from queue
+        let message = messageQueue.removeFirst()
+        InAppLogger.shared.debug("Displaying next message from queue: \(message.id) (\(messageQueue.count) remaining)")
+        
+        await displayMessage(message, viewController: viewController)
+    }
+    
+    /// Clear message queue (e.g., on route change)
+    public func clearQueue() {
+        if !messageQueue.isEmpty {
+            InAppLogger.shared.debug("Clearing message queue (\(messageQueue.count) messages)")
+            messageQueue.removeAll()
+        }
     }
     
     /// Set current route for route-based display filtering
