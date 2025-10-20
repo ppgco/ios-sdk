@@ -106,13 +106,12 @@ public class SharedUIComponents {
         button.titleLabel?.numberOfLines = 0
         button.titleLabel?.lineBreakMode = .byWordWrapping
         button.titleLabel?.textAlignment = .center
-        
-        // Ensure button expands to fit content properly
         button.titleLabel?.adjustsFontSizeToFitWidth = false
-        button.setContentCompressionResistancePriority(.required, for: .vertical)
+        
+        // Set content priorities to ensure proper layout
         button.setContentHuggingPriority(.defaultHigh, for: .vertical)
         
-        // Force exact height calculation based on actual text content
+        // Calculate minimum height based on actual text content
         // Use actual font from button for accurate measurement
         let actualFont = button.titleLabel?.font ?? UIFont.systemFont(ofSize: 16)
         let maxWidth: CGFloat = 120 // Smaller width to force text wrapping for longer texts
@@ -124,13 +123,17 @@ public class SharedUIComponents {
             context: nil
         )
         
-        // Calculate exact height needed - use ceiling to avoid fractional pixels
-        let exactHeight = ceil(textBounds.height + adjustedPadding.top + adjustedPadding.bottom + 16)
+        // Calculate minimum height needed
+        let minHeight = ceil(textBounds.height + adjustedPadding.top + adjustedPadding.bottom)
         
-        // Use exact height constraint with high priority to avoid conflicts with UIKit's internal constraints
-        let heightConstraint = button.heightAnchor.constraint(equalToConstant: exactHeight)
-        heightConstraint.priority = UILayoutPriority(999) // High priority but not required - allows UIKit to override if needed
+        // Set minimum height to ensure text fits with proper padding
+        // Using greaterThanOrEqual allows button to expand if needed
+        let heightConstraint = button.heightAnchor.constraint(greaterThanOrEqualToConstant: minHeight)
+        heightConstraint.priority = UILayoutPriority(999)
         heightConstraint.isActive = true
+        
+        // Also set content compression resistance to prevent button from shrinking
+        button.setContentCompressionResistancePriority(.required, for: .vertical)
         
         button.tag = actionIndex
         return button
