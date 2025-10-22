@@ -29,8 +29,10 @@ public class SharedUIComponents {
     }
     
     /// Create action button with full styling
+    /// Returns a UIView (might be button directly or wrapper with padding)
     public static func createActionButton(for action: InAppMessageAction, actionIndex: Int, extraHeight: CGFloat = 0, fontFamily: String? = nil, fontUrl: String? = nil) -> UIButton {
-        let button = UIButton(type: .system)
+        // Create a special button subclass that respects contentEdgeInsets properly
+        let button = PaddedButton(type: .system)
         button.setTitle(action.text, for: .normal)
         button.setTitleColor(UIColor(hex: action.textColor), for: .normal)
         button.backgroundColor = UIColor(hex: action.backgroundColor)
@@ -108,32 +110,13 @@ public class SharedUIComponents {
         button.titleLabel?.textAlignment = .center
         button.titleLabel?.adjustsFontSizeToFitWidth = false
         
-        // Set content priorities to ensure proper layout
-        button.setContentHuggingPriority(.defaultHigh, for: .vertical)
-        
-        // Calculate minimum height based on actual text content
-        // Use actual font from button for accurate measurement
-        let actualFont = button.titleLabel?.font ?? UIFont.systemFont(ofSize: 16)
-        let maxWidth: CGFloat = 120 // Smaller width to force text wrapping for longer texts
-        
-        let textBounds = (action.text as NSString).boundingRect(
-            with: CGSize(width: maxWidth - adjustedPadding.left - adjustedPadding.right, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [.font: actualFont],
-            context: nil
-        )
-        
-        // Calculate minimum height needed
-        let minHeight = ceil(textBounds.height + adjustedPadding.top + adjustedPadding.bottom)
-        
-        // Set minimum height to ensure text fits with proper padding
-        // Using greaterThanOrEqual allows button to expand if needed
-        let heightConstraint = button.heightAnchor.constraint(greaterThanOrEqualToConstant: minHeight)
-        heightConstraint.priority = UILayoutPriority(999)
-        heightConstraint.isActive = true
-        
-        // Also set content compression resistance to prevent button from shrinking
+        // Set content priorities
         button.setContentCompressionResistancePriority(.required, for: .vertical)
+        button.setContentHuggingPriority(.required, for: .vertical)
+        
+        // Force button to recalculate size after all properties are set
+        button.invalidateIntrinsicContentSize()
+        button.setNeedsLayout()
         
         button.tag = actionIndex
         return button
@@ -511,5 +494,53 @@ extension UIColor {
             blue: Double(b) / 255,
             alpha: Double(a) / 255
         )
+    }
+}
+
+/// Custom UIButton that properly respects contentEdgeInsets for multiline text
+/// This button calculates its height dynamically based on text content and padding
+class PaddedButton: UIButton {
+    
+    private var heightConstraint: NSLayoutConstraint?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Only update height if we have actual width set (from constraints)
+        guard bounds.width > 0 else { return }
+        
+        updateHeightConstraint()
+    }
+    
+    private func updateHeightConstraint() {
+        guard let titleLabel = titleLabel, let text = titleLabel.text else {
+            return
+        }
+        
+        // Calculate text size with padding
+        let availableWidth = bounds.width - contentEdgeInsets.left - contentEdgeInsets.right
+        guard availableWidth > 0 else { return }
+        
+        let textSize = (text as NSString).boundingRect(
+            with: CGSize(width: availableWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: titleLabel.font as Any],
+            context: nil
+        ).size
+        
+        let requiredHeight = ceil(textSize.height) + contentEdgeInsets.top + contentEdgeInsets.bottom
+        
+        // Update or create height constraint
+        if let existing = heightConstraint {
+            if abs(existing.constant - requiredHeight) > 0.5 { // Only update if significantly different
+                existing.constant = requiredHeight
+                setNeedsLayout()
+            }
+        } else {
+            let constraint = heightAnchor.constraint(equalToConstant: requiredHeight)
+            constraint.priority = .required
+            constraint.isActive = true
+            heightConstraint = constraint
+        }
     }
 }
