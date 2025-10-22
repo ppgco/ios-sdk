@@ -237,6 +237,11 @@ public class SharedUIComponents {
         
         label.numberOfLines = 0
         label.lineBreakMode = .byWordWrapping
+        
+        // Set high content hugging to allow centering with spacers
+        label.setContentHuggingPriority(.defaultHigh, for: .vertical)
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        
         return label
     }
     

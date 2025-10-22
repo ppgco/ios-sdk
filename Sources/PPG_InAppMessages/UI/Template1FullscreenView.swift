@@ -119,6 +119,19 @@ public class Template1FullscreenView {
         // Check if we should force full width for text
         let forceFullWidth = shouldCenterContent
         
+        // Store top spacer to later match with bottom spacer
+        var topSpacer: UIView?
+        
+        // When there are no actions, add flexible spacers top and bottom to center content
+        if message.actions.isEmpty {
+            let spacer = UIView()
+            spacer.translatesAutoresizingMaskIntoConstraints = false
+            spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+            spacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+            contentStack.addArrangedSubview(spacer)
+            topSpacer = spacer
+        }
+        
         // Add title with font family
         if let title = message.title {
             let titleLabel = SharedUIComponents.createTitleLabel(for: title, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl, forceFullWidth: forceFullWidth)
@@ -147,6 +160,18 @@ public class Template1FullscreenView {
         if !message.actions.isEmpty {
             let actionsView = SharedUIComponents.createActionsView(for: message, fillWidth: true)
             contentStack.addArrangedSubview(actionsView)
+        } else {
+            // Add bottom spacer to center content vertically
+            let bottomSpacer = UIView()
+            bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
+            bottomSpacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+            bottomSpacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+            contentStack.addArrangedSubview(bottomSpacer)
+            
+            // Make top and bottom spacers equal height to center content
+            if let topSpacer = topSpacer {
+                bottomSpacer.heightAnchor.constraint(equalTo: topSpacer.heightAnchor).isActive = true
+            }
         }
         
         sectionView.addSubview(contentStack)
