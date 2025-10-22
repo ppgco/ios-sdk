@@ -193,15 +193,8 @@ public class SharedUIComponents {
                 attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
             }
             
-            // Apply alignment
-            let paragraphStyle = NSMutableParagraphStyle()
-            if alignmentLower == "justify" {
-                paragraphStyle.alignment = .justified
-                paragraphStyle.lineBreakMode = .byWordWrapping
-            } else {
-                paragraphStyle.alignment = UIStyleParser.parseTextAlignment(alignment)
-                paragraphStyle.lineBreakMode = .byWordWrapping
-            }
+            // Apply alignment with paragraph style
+            let paragraphStyle = createParagraphStyle(alignment: alignmentLower)
             attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
             
             label.attributedText = attributedText
@@ -209,27 +202,20 @@ public class SharedUIComponents {
         
         label.textColor = UIColor(hex: color)
         
-        // Set text alignment - special handling for justify
+        // Set text alignment
         let alignmentLower = alignment.lowercased()
         if alignmentLower == "justify" {
-            let attributedText: NSMutableAttributedString
-            if let existingAttributedText = label.attributedText {
-                attributedText = NSMutableAttributedString(attributedString: existingAttributedText)
-            } else {
-                attributedText = NSMutableAttributedString(string: text)
+            // For justify, ensure attributed text has proper paragraph style
+            if label.attributedText == nil {
+                let attributedText = NSMutableAttributedString(string: text)
                 attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
                 attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: NSRange(location: 0, length: attributedText.length))
+                
+                let paragraphStyle = createParagraphStyle(alignment: alignmentLower)
+                attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedText.length))
+                
+                label.attributedText = attributedText
             }
-            
-            let paragraphStyle = NSMutableParagraphStyle()
-            paragraphStyle.alignment = .justified
-            paragraphStyle.lineBreakMode = .byWordWrapping
-            paragraphStyle.hyphenationFactor = 1.0
-            
-            let fullRange = NSRange(location: 0, length: attributedText.length)
-            attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: fullRange)
-            
-            label.attributedText = attributedText
             label.textAlignment = .justified
         } else {
             label.textAlignment = UIStyleParser.parseTextAlignment(alignment)
@@ -243,6 +229,26 @@ public class SharedUIComponents {
         label.setContentCompressionResistancePriority(.required, for: .vertical)
         
         return label
+    }
+    
+    /// Create paragraph style with proper spacing settings
+    private static func createParagraphStyle(alignment: String) -> NSMutableParagraphStyle {
+        let paragraphStyle = NSMutableParagraphStyle()
+        
+        if alignment == "justify" {
+            paragraphStyle.alignment = .justified
+            paragraphStyle.hyphenationFactor = 1.0
+        } else {
+            paragraphStyle.alignment = UIStyleParser.parseTextAlignment(alignment)
+        }
+        
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.paragraphSpacing = 0
+        paragraphStyle.paragraphSpacingBefore = 0
+        paragraphStyle.lineHeightMultiple = 1.0
+        paragraphStyle.lineSpacing = 0
+        
+        return paragraphStyle
     }
     
     /// Create title label with font family support

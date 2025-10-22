@@ -116,21 +116,11 @@ public class Template1FullscreenView {
         contentStack.distribution = .fill
         contentStack.translatesAutoresizingMaskIntoConstraints = false
         
-        // Check if we should force full width for text
         let forceFullWidth = shouldCenterContent
         
-        // Store top spacer to later match with bottom spacer
-        var topSpacer: UIView?
-        
-        // When there are no actions, add flexible spacers top and bottom to center content
-        if message.actions.isEmpty {
-            let spacer = UIView()
-            spacer.translatesAutoresizingMaskIntoConstraints = false
-            spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
-            spacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-            contentStack.addArrangedSubview(spacer)
-            topSpacer = spacer
-        }
+        // Add flexible top spacer to center content vertically
+        let topSpacer = createFlexibleSpacer()
+        contentStack.addArrangedSubview(topSpacer)
         
         // Add title with font family
         if let title = message.title {
@@ -139,7 +129,8 @@ public class Template1FullscreenView {
             
             // Apply custom spacing after title (only if description exists)
             if message.description != nil {
-                contentStack.setCustomSpacing(CGFloat(message.layout.spaceBetweenTitleAndDescription), after: titleLabel)
+                let spacing = CGFloat(message.layout.spaceBetweenTitleAndDescription)
+                contentStack.setCustomSpacing(spacing, after: titleLabel)
             }
         }
         
@@ -149,30 +140,25 @@ public class Template1FullscreenView {
             contentStack.addArrangedSubview(descriptionLabel)
         }
         
-        // Add spacing before actions if specified
+        // Add fixed spacing before actions if specified
         if !message.actions.isEmpty && message.layout.spaceBetweenContentAndActions > 0 {
             let spacer = UIView()
             spacer.heightAnchor.constraint(equalToConstant: CGFloat(message.layout.spaceBetweenContentAndActions)).isActive = true
             contentStack.addArrangedSubview(spacer)
         }
         
-        // Add actions at bottom with full width
+        // Add actions if present
         if !message.actions.isEmpty {
             let actionsView = SharedUIComponents.createActionsView(for: message, fillWidth: true)
             contentStack.addArrangedSubview(actionsView)
-        } else {
-            // Add bottom spacer to center content vertically
-            let bottomSpacer = UIView()
-            bottomSpacer.translatesAutoresizingMaskIntoConstraints = false
-            bottomSpacer.setContentHuggingPriority(.defaultLow, for: .vertical)
-            bottomSpacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-            contentStack.addArrangedSubview(bottomSpacer)
-            
-            // Make top and bottom spacers equal height to center content
-            if let topSpacer = topSpacer {
-                bottomSpacer.heightAnchor.constraint(equalTo: topSpacer.heightAnchor).isActive = true
-            }
         }
+        
+        // Add bottom spacer to center all content vertically
+        let bottomSpacer = createFlexibleSpacer()
+        contentStack.addArrangedSubview(bottomSpacer)
+        
+        // Equal height with top spacer for perfect centering
+        bottomSpacer.heightAnchor.constraint(equalTo: topSpacer.heightAnchor).isActive = true
         
         sectionView.addSubview(contentStack)
         
@@ -196,6 +182,15 @@ public class Template1FullscreenView {
         }
         
         return sectionView
+    }
+    
+    /// Create flexible spacer for vertical centering
+    private static func createFlexibleSpacer() -> UIView {
+        let spacer = UIView()
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        spacer.setContentHuggingPriority(.defaultLow, for: .vertical)
+        spacer.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
+        return spacer
     }
     
     /// Setup constraints for fullscreen template
