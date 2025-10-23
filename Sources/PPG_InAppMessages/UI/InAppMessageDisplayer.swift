@@ -12,7 +12,7 @@ private class ShadowContainerView: UIView {
 }
 
 /// InAppMessageDisplayer handles the UI presentation logic and coordinates with template views
-public class InAppMessageDisplayer {
+internal class InAppMessageDisplayer {
     
     // Properties
     private let tag = "InAppMessageDisplayer"
@@ -64,7 +64,7 @@ public class InAppMessageDisplayer {
     
     // Initialization
     
-    public init(
+    init(
         onMessageDismissed: @escaping () -> Void,
         onMessageEvent: @escaping (String, InAppMessage, Int?) -> Void,
         subscriptionHandler: PushNotificationSubscriber
@@ -79,12 +79,12 @@ public class InAppMessageDisplayer {
     /// Set handler for custom code actions
     /// This allows the app to handle custom code calls from action buttons
     /// - Parameter handler: Function that takes custom code string and processes it
-    public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
+    func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
         self.customCodeActionHandler = handler
     }
     
     /// Show message using appropriate template
-    public func showMessage(_ message: InAppMessage, in viewController: UIViewController) {
+    func showMessage(_ message: InAppMessage, in viewController: UIViewController) {
         guard !isDismissing else { return }
         
         currentMessage = message
@@ -183,12 +183,12 @@ public class InAppMessageDisplayer {
     }
     
     /// Dismiss message (public interface)
-    public func dismissMessage() {
+    func dismissMessage() {
         dismissMessageInternal(sendCloseEvent: true)
     }
     
     /// Dismiss message silently (no close event)
-    public func dismissMessageSilently() {
+    func dismissMessageSilently() {
         dismissMessageInternal(sendCloseEvent: false)
     }
     

@@ -5,7 +5,7 @@ import UIKit
 /// from the PushPushGo SDK's UserDefaults.
 /// 
 /// This provides a bridge to the push notification SDK without creating a direct dependency.
-public class PushNotificationStatusProvider {
+internal class PushNotificationStatusProvider {
     
     // Constants
     private static let tag = "PushNotificationStatusProvider"
@@ -18,7 +18,7 @@ public class PushNotificationStatusProvider {
     private let userDefaults: UserDefaults
     
     // Initialization
-    public init() {
+    init() {
         self.userDefaults = UserDefaults.standard
     }
     
@@ -28,7 +28,7 @@ public class PushNotificationStatusProvider {
     /// by reading directly from the PushPushGo SDK's UserDefaults
     /// 
     /// - Returns: true if subscribed (defaults to false if not found)
-    public func isSubscribed() -> Bool {
+    func isSubscribed() -> Bool {
         let result = userDefaults.bool(forKey: Self.isSubscribed)
         return result
     }
@@ -36,7 +36,7 @@ public class PushNotificationStatusProvider {
     /// Checks if notifications are blocked for the current user
     /// 
     /// - Returns: true if notifications are blocked (defaults to false if not found)
-    public func isNotificationsBlocked() -> Bool {
+    func isNotificationsBlocked() -> Bool {
         return userDefaults.bool(forKey: Self.areNotificationsBlocked)
     }
     
@@ -44,7 +44,7 @@ public class PushNotificationStatusProvider {
     /// 
     /// - Parameter audienceType: The audience type to check against
     /// - Returns: true if the current user matches the specified audience type
-    public func matchesAudienceType(_ audienceType: UserAudienceType) -> Bool {
+    func matchesAudienceType(_ audienceType: UserAudienceType) -> Bool {
         switch audienceType {
         case .all:
             return true
@@ -63,7 +63,7 @@ public class PushNotificationStatusProvider {
 /// Interface for requesting push notification subscription.
 /// This provides a clean way for the in-app messages to trigger a subscription request
 /// without directly depending on the push notification SDK.
-public protocol PushNotificationSubscriber {
+internal protocol PushNotificationSubscriber {
     /// Request user to subscribe to push notifications
     /// 
     /// - Parameter viewController: The view controller to present permission dialogs
@@ -73,13 +73,13 @@ public protocol PushNotificationSubscriber {
 
 /// NotificationCenter-based implementation that communicates with Push SDK
 /// without direct dependencies. Uses notification pattern for loose coupling.
-public class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
+internal class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
     
     private static let tag = "DefaultPushSubscriber"
     
-    public init() {}
+    init() {}
     
-    public func requestSubscription(viewController: UIViewController) async -> Bool {
+    func requestSubscription(viewController: UIViewController) async -> Bool {
         return await withCheckedContinuation { continuation in
             // Track if continuation has been resumed to prevent double resume
             var hasResumed = false

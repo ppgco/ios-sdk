@@ -2,10 +2,10 @@ import Foundation
 import UIKit
 
 /// Template 2: Desktop modal layout - centered card with image and content
-public class Template2DesktopView {
+internal class Template2DesktopView {
     
     /// Create desktop modal template view
-    public static func createView(for message: InAppMessage) -> UIView {
+    static func createView(for message: InAppMessage) -> UIView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
@@ -205,7 +205,7 @@ public class Template2DesktopView {
     }
     
     /// Setup constraints for desktop modal with placement support
-    public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
+    static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
         // Template2 uses fixed margin, ignores backend layout.margin
         let margin: CGFloat = 15

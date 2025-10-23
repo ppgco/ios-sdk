@@ -2,8 +2,8 @@ import UIKit
 import CoreText
 
 /// Clean FontManager for bundled fonts with backend weight mapping (100-900)
-public class FontManager {
-    public static let shared = FontManager()
+internal class FontManager {
+    static let shared = FontManager()
     
     // Properties
     private var registeredFonts: Set<String> = []
@@ -58,7 +58,7 @@ public class FontManager {
     // Public API
     
     /// Load font with backend parameters (weight: 100-900, style: "normal"/"italic")
-    public func loadFont(family: String, size: CGFloat, weight: Int, style: String = "normal") -> UIFont {
+    func loadFont(family: String, size: CGFloat, weight: Int, style: String = "normal") -> UIFont {
         let cacheKey = "\(family)-\(size)-\(weight)-\(style)" as NSString
         
         if let cached = fontCache.object(forKey: cacheKey) {
@@ -350,7 +350,7 @@ public class FontManager {
     
     // Cache Management
     
-    public func clearCache() {
+    func clearCache() {
         fontCache.removeAllObjects()
     }
 }

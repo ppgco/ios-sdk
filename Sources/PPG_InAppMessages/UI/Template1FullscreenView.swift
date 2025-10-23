@@ -2,10 +2,10 @@ import Foundation
 import UIKit
 
 /// Template 1: Fullscreen layout with image taking 50% of screen height
-public class Template1FullscreenView {
+internal class Template1FullscreenView {
     
     /// Create template view for fullscreen
-    public static func createView(for message: InAppMessage) -> UIView {
+    static func createView(for message: InAppMessage) -> UIView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
@@ -194,7 +194,7 @@ public class Template1FullscreenView {
     }
     
     /// Setup constraints for fullscreen template
-    public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController) {
+    static func setupConstraints(_ messageView: UIView, in viewController: UIViewController) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([

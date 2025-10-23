@@ -2,7 +2,7 @@ import Foundation
 import os.log
 
 /// Logger utility class for In-App Messages SDK
-public class InAppLogger {
+internal class InAppLogger {
     
     static let shared = InAppLogger()
     

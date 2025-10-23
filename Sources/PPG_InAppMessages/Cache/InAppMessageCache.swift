@@ -1,7 +1,7 @@
 import Foundation
 
 /// Cache management for In-App Messages with ETag support
-public class InAppMessageCache {
+internal class InAppMessageCache {
     
     // Constants
     private enum Keys {
@@ -18,7 +18,7 @@ public class InAppMessageCache {
     private let decoder: JSONDecoder
     
     // Initialization
-    public init(userDefaults: UserDefaults = .standard) {
+    init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
         self.encoder = JSONEncoder()
         self.decoder = JSONDecoder()
@@ -28,7 +28,7 @@ public class InAppMessageCache {
     
     /// Get stored ETag if cache is not expired
     /// - Returns: Stored ETag or nil if expired/not found
-    public func getStoredETag() -> String? {
+    func getStoredETag() -> String? {
         let timestamp = userDefaults.double(forKey: Keys.cacheTimestamp)
         let currentTime = Date().timeIntervalSince1970 * 1000 // Convert to milliseconds
         let timeDiff = currentTime - timestamp
@@ -51,7 +51,7 @@ public class InAppMessageCache {
     /// - Parameters:
     ///   - etag: ETag from server response
     ///   - messages: Messages to cache
-    public func saveCache(etag: String, messages: [InAppMessage]) {
+    func saveCache(etag: String, messages: [InAppMessage]) {
         do {
             let messagesData = try encoder.encode(messages)
             let currentTime = Date().timeIntervalSince1970 * 1000 // Convert to milliseconds
@@ -69,7 +69,7 @@ public class InAppMessageCache {
     
     /// Get cached messages if available
     /// - Returns: Cached messages or nil if not found/invalid
-    public func getCachedMessages() -> [InAppMessage]? {
+    func getCachedMessages() -> [InAppMessage]? {
         guard let messagesData = userDefaults.data(forKey: Keys.cachedMessages) else {
             return nil
         }
@@ -86,7 +86,7 @@ public class InAppMessageCache {
     }
     
     /// Clear all cached data
-    public func clearCache() {
+    func clearCache() {
         userDefaults.removeObject(forKey: Keys.etag)
         userDefaults.removeObject(forKey: Keys.cachedMessages)
         userDefaults.removeObject(forKey: Keys.cacheTimestamp)
@@ -95,7 +95,7 @@ public class InAppMessageCache {
     // Debug Helpers
     
     /// Get cache status for debugging
-    public func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {
+    func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {
         let etag = userDefaults.string(forKey: Keys.etag)
         let timestamp = userDefaults.double(forKey: Keys.cacheTimestamp)
         let timestampDate = timestamp > 0 ? Date(timeIntervalSince1970: timestamp / 1000) : nil

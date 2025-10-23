@@ -1,7 +1,7 @@
 import Foundation
 
 /// Repository class for handling API communication for in-app messages
-public class InAppMessageRepository {
+internal class InAppMessageRepository {
     
     // Properties
     private let apiKey: String
@@ -17,7 +17,7 @@ public class InAppMessageRepository {
     }
     
     // Initialization
-    public init(apiKey: String, projectId: String, isProduction: Bool = true, cache: InAppMessageCache? = nil) {
+    init(apiKey: String, projectId: String, isProduction: Bool = true, cache: InAppMessageCache? = nil) {
         self.apiKey = apiKey
         self.projectId = projectId
         self.isProduction = isProduction
@@ -29,7 +29,7 @@ public class InAppMessageRepository {
     
     /// Fetch active in-app messages from API with ETag caching
     /// - Returns: Array of InAppMessage objects
-    public func getMessages() async throws -> [InAppMessage] {
+    func getMessages() async throws -> [InAppMessage] {
         // Get stored ETag for cache validation
         let storedETag = cache.getStoredETag()
         
@@ -137,7 +137,7 @@ public class InAppMessageRepository {
     /// - Parameters:
     ///   - eventType: Type of event (inapp.show, inapp.close, inapp.cta.X)
     ///   - messageId: ID of the message
-    public func dispatchEvent(_ eventType: String, messageId: String) async throws {
+    func dispatchEvent(_ eventType: String, messageId: String) async throws {
         let endpoint = "\(baseURL)/v1/ios/\(projectId)/inapp/event"
         
         guard let url = URL(string: endpoint) else {
@@ -198,26 +198,26 @@ public class InAppMessageRepository {
     
     /// Clear message cache
     /// This will force fresh data fetch on next API call
-    public func clearCache() {
+    func clearCache() {
         cache.clearCache()
     }
     
     /// Get cache status for debugging
     /// - Returns: Cache status information
-    public func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {
+    func getCacheStatus() -> (etag: String?, messageCount: Int?, timestamp: Date?, isExpired: Bool) {
         return cache.getCacheStatus()
     }
 }
 
 // Repository Errors
-public enum RepositoryError: Error, LocalizedError {
+internal enum RepositoryError: Error, LocalizedError {
     case invalidURL
     case invalidResponse
     case httpError(Int)
     case apiError(String)
     case decodingError(Error)
     
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .invalidURL:
             return "Invalid API URL"

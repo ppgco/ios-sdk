@@ -2,11 +2,11 @@ import Foundation
 import UIKit
 
 /// Shared UI component factory for in-app messages
-public class SharedUIComponents {
+internal class SharedUIComponents {
     // Button Creation
     
     /// Create close button with style from payload
-    public static func createCloseButton(style: MessageStyle) -> UIButton {
+    static func createCloseButton(style: MessageStyle) -> UIButton {
         let button = UIButton(type: .system)
         button.setTitle("✕", for: .normal)
         button.setTitleColor(UIColor(hex: style.closeIconColor), for: .normal)
@@ -30,7 +30,7 @@ public class SharedUIComponents {
     
     /// Create action button with full styling
     /// Returns a UIView (might be button directly or wrapper with padding)
-    public static func createActionButton(for action: InAppMessageAction, actionIndex: Int, extraHeight: CGFloat = 0, fontFamily: String? = nil, fontUrl: String? = nil) -> UIButton {
+    static func createActionButton(for action: InAppMessageAction, actionIndex: Int, extraHeight: CGFloat = 0, fontFamily: String? = nil, fontUrl: String? = nil) -> UIButton {
         // Create a special button subclass that respects contentEdgeInsets properly
         let button = PaddedButton(type: .system)
         button.setTitle(action.text, for: .normal)
@@ -252,7 +252,7 @@ public class SharedUIComponents {
     }
     
     /// Create title label with font family support
-    public static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+    static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
         return createStyledLabel(
             text: title.text,
             fontSize: title.fontSize,
@@ -266,7 +266,7 @@ public class SharedUIComponents {
     }
     
     /// Create description label with font family support
-    public static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+    static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
         return createStyledLabel(
             text: description.text,
             fontSize: description.fontSize,
@@ -282,7 +282,7 @@ public class SharedUIComponents {
     // Image Creation
     
     /// Create image view with async loading
-    public static func createImageView(for imageUrl: String, height: CGFloat = 200) -> UIImageView {
+    static func createImageView(for imageUrl: String, height: CGFloat = 200) -> UIImageView {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
@@ -297,7 +297,7 @@ public class SharedUIComponents {
     }
     
     /// Load image asynchronously
-    public static func loadImageAsync(from urlString: String, into imageView: UIImageView) {
+    static func loadImageAsync(from urlString: String, into imageView: UIImageView) {
         guard let url = URL(string: urlString) else { return }
         
         Task {
@@ -317,7 +317,7 @@ public class SharedUIComponents {
     // Actions Container
     
     /// Create actions stack view (vertical for Template 1, horizontal for others)
-    public static func createActionsView(for message: InAppMessage, fillWidth: Bool = false) -> UIView {
+    static func createActionsView(for message: InAppMessage, fillWidth: Bool = false) -> UIView {
         let stackView = UIStackView()
         
         // Use vertical layout for Template 1 (fullscreen) when fillWidth is true
@@ -347,21 +347,21 @@ public class SharedUIComponents {
 }
 
 /// Style parsing utilities
-public class UIStyleParser {
+internal class UIStyleParser {
     
     /// Parse float value from string
-    public static func parseFloat(_ value: String) -> CGFloat {
+    static func parseFloat(_ value: String) -> CGFloat {
         return CGFloat(Double(value.replacingOccurrences(of: "px", with: "")) ?? 0.0)
     }
     
     /// Parse padding string to UIEdgeInsets - supports both single values and CSS-style multi-values
-    public static func parsePadding(_ paddingString: String) -> UIEdgeInsets {
+    static func parsePadding(_ paddingString: String) -> UIEdgeInsets {
         // Use the more advanced parser that handles 1, 2, and 4 values
         return parsePaddingString(paddingString)
     }
     
     /// Parse complex padding string like "48px 24px 48px 24px" to UIEdgeInsets
-    public static func parsePaddingString(_ paddingString: String) -> UIEdgeInsets {
+    static func parsePaddingString(_ paddingString: String) -> UIEdgeInsets {
         let components = paddingString.split(separator: " ").map { String($0) }
         
         switch components.count {
@@ -387,7 +387,7 @@ public class UIStyleParser {
     }
     
     /// Parse border radius string - supports CSS-style values (1, 2, or 4 values)
-    public static func parseBorderRadius(_ radiusString: String) -> (topLeft: CGFloat, topRight: CGFloat, bottomRight: CGFloat, bottomLeft: CGFloat) {
+    static func parseBorderRadius(_ radiusString: String) -> (topLeft: CGFloat, topRight: CGFloat, bottomRight: CGFloat, bottomLeft: CGFloat) {
         let components = radiusString.split(separator: " ").map { String($0) }
         
         switch components.count {
@@ -415,7 +415,7 @@ public class UIStyleParser {
     
     /// Apply border radius with CACornerMask support for individual corners (iOS 11+)
     /// Note: CALayer limitation - different radius per corner not possible, fallback to average
-    public static func applyBorderRadius(to view: UIView, radiusString: String) {
+    static func applyBorderRadius(to view: UIView, radiusString: String) {
         let borderRadius = parseBorderRadius(radiusString)
         
         // Check if all corners have the same radius
@@ -454,7 +454,7 @@ public class UIStyleParser {
     }
     
     /// Parse font weight
-    public static func parseFontWeight(_ weight: Int) -> UIFont.Weight {
+    static func parseFontWeight(_ weight: Int) -> UIFont.Weight {
         switch weight {
         case 100: return .ultraLight
         case 200: return .thin
@@ -470,7 +470,7 @@ public class UIStyleParser {
     }
     
     /// Parse text alignment
-    public static func parseTextAlignment(_ alignment: String) -> NSTextAlignment {
+    static func parseTextAlignment(_ alignment: String) -> NSTextAlignment {
         switch alignment.lowercased() {
         case "center": return .center
         case "right": return .right

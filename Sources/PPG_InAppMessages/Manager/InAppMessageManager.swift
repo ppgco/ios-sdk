@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 
 /// Manages the lifecycle and business logic of in-app messages
-public class InAppMessageManager {
+internal class InAppMessageManager {
     
     // Properties
     private let repository: InAppMessageRepository
@@ -24,21 +24,21 @@ public class InAppMessageManager {
     private var currentRoute: String = ""
     
     // Initialization
-    public init(repository: InAppMessageRepository, displayer: InAppMessageDisplayer? = nil) {
+    init(repository: InAppMessageRepository, displayer: InAppMessageDisplayer? = nil) {
         self.repository = repository
         self.displayer = displayer
         loadDisplayHistory()
     }
     
     /// Set displayer reference after initialization
-    public func setDisplayer(_ displayer: InAppMessageDisplayer) {
+    func setDisplayer(_ displayer: InAppMessageDisplayer) {
         self.displayer = displayer
     }
     
     /// Set handler for custom code actions from in-app message buttons
     /// This allows the app to handle custom code calls from action buttons
     /// - Parameter handler: Function that takes custom code string and processes it
-    public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
+    func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
         displayer?.setCustomCodeActionHandler(handler)
     }
     
@@ -49,7 +49,7 @@ public class InAppMessageManager {
     ///   - messages: Array of messages from API
     ///   - viewController: Current view controller for display
     ///   - skipTriggerCheck: Skip trigger type validation (for custom triggers)
-    public func processMessages(_ messages: [InAppMessage], viewController: UIViewController, skipTriggerCheck: Bool = false) async {
+    func processMessages(_ messages: [InAppMessage], viewController: UIViewController, skipTriggerCheck: Bool = false) async {
         InAppLogger.shared.debug("Processing \(messages.count) messages")
         
         // Store view controller for queue processing
@@ -85,7 +85,7 @@ public class InAppMessageManager {
     ///   - key: Custom trigger key to match
     ///   - value: Custom trigger value to match  
     ///   - viewController: Current view controller
-    public func handleCustomTrigger(key: String, value: String, viewController: UIViewController) async {
+    func handleCustomTrigger(key: String, value: String, viewController: UIViewController) async {
         InAppLogger.shared.debug("Custom trigger: key='\(key)', value='\(value)'")
         
         do {
@@ -125,7 +125,7 @@ public class InAppMessageManager {
     
     /// Mark message as displayed to track history with timestamp
     /// - Parameter messageId: ID of the displayed message
-    public func markMessageAsDisplayed(_ messageId: String) {
+    func markMessageAsDisplayed(_ messageId: String) {
         let currentTime = Date().timeIntervalSince1970
         displayHistory[messageId] = currentTime
         saveDisplayHistory()
@@ -133,7 +133,7 @@ public class InAppMessageManager {
     }
     
     /// Clear currently displayed message and show next in queue
-    public func clearCurrentMessage() {
+    func clearCurrentMessage() {
         InAppLogger.shared.debug("Clearing current message")
         currentlyDisplayedMessage = nil
         
@@ -169,7 +169,7 @@ public class InAppMessageManager {
     }
     
     /// Clear message queue (e.g., on route change)
-    public func clearQueue() {
+    func clearQueue() {
         if !messageQueue.isEmpty {
             InAppLogger.shared.debug("Clearing message queue (\(messageQueue.count) messages)")
             messageQueue.removeAll()
@@ -178,7 +178,7 @@ public class InAppMessageManager {
     
     /// Set current route for route-based display filtering
     /// - Parameter route: Current route path
-    public func setCurrentRoute(_ route: String) {
+    func setCurrentRoute(_ route: String) {
         currentRoute = route
         InAppLogger.shared.debug("Manager: Current route set to '\(route)'")
     }
@@ -189,7 +189,7 @@ public class InAppMessageManager {
     ///   - message: Message to check
     ///   - route: Route path to check against
     /// - Returns: True if message should be displayed on the route
-    public func shouldDisplayMessageOnRoute(_ message: InAppMessage, route: String) -> Bool {
+    func shouldDisplayMessageOnRoute(_ message: InAppMessage, route: String) -> Bool {
         let display = message.settings.display
         let displayOn = message.settings.displayOn
         

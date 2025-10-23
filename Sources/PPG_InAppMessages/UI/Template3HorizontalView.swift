@@ -2,10 +2,10 @@ import Foundation
 import UIKit
 
 /// Template 3: Horizontal layout with image on left, content on right
-public class Template3HorizontalView {
+internal class Template3HorizontalView {
     
     /// Create horizontal template view
-    public static func createView(for message: InAppMessage) -> UIView {
+    static func createView(for message: InAppMessage) -> UIView {
         let containerView = UIView()
         containerView.backgroundColor = UIColor(hex: message.style.backgroundColor)
         
@@ -231,7 +231,7 @@ public class Template3HorizontalView {
     
     
     /// Setup constraints for horizontal modal with full-width layout for Review template
-    public static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
+    static func setupConstraints(_ messageView: UIView, in viewController: UIViewController, placement: String? = nil, marginString: String? = nil) {
         messageView.translatesAutoresizingMaskIntoConstraints = false
         // Template3 ignores margin completely - always full-width for Review template
         
