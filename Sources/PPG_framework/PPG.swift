@@ -40,6 +40,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         CategoryManager.addDefaultCategories()
         
         // Check current notification permissions on startup
+        // This will also clear subscriber data if permissions are denied
         SharedData.shared.checkAndUpdateNotificationPermissions()
         
         // Check if user is already subscribed (has device token saved)
@@ -59,6 +60,18 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 // Update subscription status - permission denied
                 SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
                 handler(.error(error.localizedDescription))
+                return
+            }
+
+            // Check if user granted permission
+            guard granted else {
+                print("Init Notifications denied by user")
+                // Clear subscriber data immediately when user denies
+                SharedData.shared.deviceToken = ""
+                SharedData.shared.subscriberId = ""
+                SharedData.shared.isSubscribed = false
+                SharedData.shared.areNotificationsBlocked = true
+                handler(.error("User denied notification permissions"))
                 return
             }
 

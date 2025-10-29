@@ -97,12 +97,22 @@ public class SharedData {
     }
     
     /// Check system notification permissions and update blocked status
+    /// Also clears subscriber data if permissions are denied
     func checkAndUpdateNotificationPermissions() {
         center.getNotificationSettings { [weak self] settings in
             DispatchQueue.main.async {
+                guard let self = self else { return }
+                
                 // User has blocked notifications at system level
                 let isBlocked = (settings.authorizationStatus == .denied)
-                self?.areNotificationsBlocked = isBlocked
+                self.areNotificationsBlocked = isBlocked
+                
+                // Clear subscriber data if permissions are denied
+                if isBlocked {
+                    self.deviceToken = ""
+                    self.subscriberId = ""
+                    self.isSubscribed = false
+                }
             }
         }
     }
