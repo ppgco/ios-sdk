@@ -20,7 +20,6 @@ class ApiService {
             handler(.error(log))
             return
         }
-
         let projectId = SharedData.shared.projectId
 
         let url = URL(string: "\(baseUrl)/v1/ios/\(projectId)/subscriber")!
@@ -39,15 +38,11 @@ class ApiService {
             }
 
             if let decodedData = try? JSONDecoder().decode(SubscribeUserResponse.self, from: data) {
-                print("decodedData:")
-                print(decodedData)
-
                 SharedData.shared.subscriberId = decodedData._id
-
                 handler(.success)
             } else {
                 let log = "Invalid response from server"
-                print(log)
+                print("❌ PPG SDK: \(log)")
                 handler(.error(log))
             }
         }.resume()

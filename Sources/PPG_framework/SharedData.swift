@@ -13,45 +13,53 @@ public class SharedData {
 
     public static var shared = SharedData()
     public var appGroupId: String = ""
-    var sharedDefaults: UserDefaults? {
-        return UserDefaults(suiteName: appGroupId)
+    var sharedDefaults: UserDefaults {
+        // If appGroupId is empty or invalid, fallback to standard UserDefaults
+        if appGroupId.isEmpty {
+            return UserDefaults.standard
+        }
+        return UserDefaults(suiteName: appGroupId) ?? UserDefaults.standard
     }
 
     var projectId: String {
         get {
-            return sharedDefaults?.string(forKey: "PPGProjectId") ?? ""
+            return sharedDefaults.string(forKey: "PPGProjectId") ?? ""
         }
         set {
-            sharedDefaults?.set(newValue, forKey: "PPGProjectId")
+            sharedDefaults.set(newValue, forKey: "PPGProjectId")
         }
     }
 
     var apiToken: String {
         get {
-            return sharedDefaults?.string(forKey: "PPGAPIToken") ?? ""
+            return sharedDefaults.string(forKey: "PPGAPIToken") ?? ""
         }
         set {
-            sharedDefaults?.set(newValue, forKey: "PPGAPIToken")
+            sharedDefaults.set(newValue, forKey: "PPGAPIToken")
         }
     }
 
     var subscriberId: String {
         get {
-            return sharedDefaults?.string(forKey: "PPGSubscriberId")
+            return sharedDefaults.string(forKey: "PPGSubscriberId")
                 // Legacy supported value
                 ?? UserDefaults.standard.string(forKey: "PPGSubscriberId") ?? ""
         }
         set {
-            sharedDefaults?.set(newValue, forKey: "PPGSubscriberId")
+            sharedDefaults.set(newValue, forKey: "PPGSubscriberId")
+            // Save to standard UserDefaults for backward compatibility
+            if !appGroupId.isEmpty {
+                UserDefaults.standard.set(newValue, forKey: "PPGSubscriberId")
+            }
         }
     }
 
     var deviceToken: String {
         get {
-            return sharedDefaults?.string(forKey: "PPGDeviceToken") ?? ""
+            return sharedDefaults.string(forKey: "PPGDeviceToken") ?? ""
         }
         set {
-            sharedDefaults?.set(newValue, forKey: "PPGDeviceToken")
+            sharedDefaults.set(newValue, forKey: "PPGDeviceToken")
         }
     }
 
@@ -109,11 +117,16 @@ public class SharedData {
                 
                 // Clear subscriber data if permissions are denied
                 if isBlocked {
-                    self.deviceToken = ""
-                    self.subscriberId = ""
-                    self.isSubscribed = false
+                    self.clearSubscriberData()
                 }
             }
         }
+    }
+    
+    /// Clear all subscriber-related data
+    func clearSubscriberData() {
+        deviceToken = ""
+        subscriberId = ""
+        isSubscribed = false
     }
 }

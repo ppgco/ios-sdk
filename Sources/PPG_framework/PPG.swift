@@ -29,6 +29,14 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     public static func initializeNotifications(
         projectId: String, apiToken: String, appGroupId: String
     ) {
+        // Validate required parameters
+        guard !projectId.isEmpty else {
+            fatalError("PPG SDK: projectId cannot be empty")
+        }
+        guard !apiToken.isEmpty else {
+            fatalError("PPG SDK: apiToken cannot be empty")
+        }
+        
         // Initialize bridge for In-App Messages communication
         _ = subscriptionBridge // Force initialization
         SharedData.shared.appGroupId = appGroupId
@@ -67,9 +75,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             guard granted else {
                 print("Init Notifications denied by user")
                 // Clear subscriber data immediately when user denies
-                SharedData.shared.deviceToken = ""
-                SharedData.shared.subscriberId = ""
-                SharedData.shared.isSubscribed = false
+                SharedData.shared.clearSubscriberData()
                 SharedData.shared.areNotificationsBlocked = true
                 handler(.error("User denied notification permissions"))
                 return
@@ -105,7 +111,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         print("Device token \(key)")
 
         if oldKey == key {
-            handler(.error("Token already sent"))
+            // Token already registered
+            handler(.success)
             return
         }
 
@@ -149,10 +156,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     ) {
         ApiService.shared.unsubscribeUser { result in
             if case .success = result {
-                SharedData.shared.deviceToken = ""
-                SharedData.shared.subscriberId = ""
-                // Update status - bridge for in app messages
-                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
+                // Clear all subscriber data
+                SharedData.shared.clearSubscriberData()
             }
 
             handler(result)

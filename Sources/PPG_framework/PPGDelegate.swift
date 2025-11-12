@@ -15,7 +15,14 @@ open class PPGAppDelegate: NSObject, UIApplicationDelegate {
     }
     
     open func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        PPG.sendDeviceToken(deviceToken) { _ in }
+        PPG.sendDeviceToken(deviceToken) { result in
+            switch result {
+            case .success:
+                print("✅ PPG: Device token registered")
+            case .error(let error):
+                print("❌ PPG: Failed to register device token: \(error)")
+            }
+        }
     }
     
     open func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
@@ -36,7 +43,18 @@ public extension UIApplicationDelegate {
     }
     
     func PPGdidRegisterForRemoteNotificationsWithDeviceToken(_ deviceToken: Data) {
-        PPG.sendDeviceToken(deviceToken) { _ in }
+        PPG.sendDeviceToken(deviceToken) { result in
+            switch result {
+            case .success:
+                print("✅ PPG: Device token registered")
+            case .error(let error):
+                print("❌ PPG: Failed to register device token: \(error)")
+            }
+        }
+    }
+    
+    func PPGdidRegisterForRemoteNotificationsWithDeviceToken(_ deviceToken: Data, completion: @escaping (_ result: ActionResult) -> Void) {
+        PPG.sendDeviceToken(deviceToken, handler: completion)
     }
     
     func PPGdidReceiveRemoteNotification(_ userInfo: [AnyHashable : Any], completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
