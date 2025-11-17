@@ -1,0 +1,557 @@
+import Foundation
+import UIKit
+
+/// Shared UI component factory for in-app messages
+internal class SharedUIComponents {
+    // Button Creation
+    
+    /// Create close button with style from payload
+    static func createCloseButton(style: MessageStyle) -> UIButton {
+        let button = UIButton(type: .system)
+        button.setTitle("✕", for: .normal)
+        button.setTitleColor(UIColor(hex: style.closeIconColor), for: .normal)
+        
+        let iconSize = CGFloat(style.closeIconWidth)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: iconSize, weight: .medium)
+        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
+        button.layer.cornerRadius = iconSize / 2
+        button.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Set size based on closeIconWidth
+        let buttonSize = iconSize * 1.8 // Make button slightly larger than icon
+        button.widthAnchor.constraint(equalToConstant: buttonSize).isActive = true
+        button.heightAnchor.constraint(equalToConstant: buttonSize).isActive = true
+        
+        // CRITICAL FIX: Set tag to -1 to distinguish from action buttons (which have tag >= 0)
+        button.tag = -1
+        
+        return button
+    }
+    
+    /// Create action button with full styling
+    /// Returns a UIView (might be button directly or wrapper with padding)
+    static func createActionButton(for action: InAppMessageAction, actionIndex: Int, extraHeight: CGFloat = 0, fontFamily: String? = nil, fontUrl: String? = nil) -> UIButton {
+        // Create a special button subclass that respects contentEdgeInsets properly
+        let button = PaddedButton(type: .system)
+        button.setTitle(action.text, for: .normal)
+        button.setTitleColor(UIColor(hex: action.textColor), for: .normal)
+        button.backgroundColor = UIColor(hex: action.backgroundColor)
+        button.layer.borderColor = UIColor(hex: action.borderColor).cgColor
+        button.layer.borderWidth = 1
+        // Apply borderRadius with CACornerMask support for individual corners (iOS 11+)
+        UIStyleParser.applyBorderRadius(to: button, radiusString: action.borderRadius)
+        
+        // Set initial system font with 1.3x multiplier
+        let weight = UIStyleParser.parseFontWeight(action.fontWeight)
+        let fontSize = CGFloat(action.fontSize) * 1.3
+        
+        // Apply style if specified
+        let styleString = action.style.lowercased() ?? "normal"
+        
+        if styleString == "italic" {
+            let traits: UIFontDescriptor.SymbolicTraits = [.traitItalic]
+            if let descriptor = UIFont.systemFont(ofSize: fontSize, weight: weight).fontDescriptor.withSymbolicTraits(traits) {
+                button.titleLabel?.font = UIFont(descriptor: descriptor, size: fontSize)
+            } else {
+                button.titleLabel?.font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+            }
+        } else {
+            button.titleLabel?.font = UIFont.systemFont(ofSize: fontSize, weight: weight)
+        }
+        
+        // Apply underline if specified
+        if styleString == "underline" {
+            let attributedText = NSMutableAttributedString(string: action.text)
+            let range = NSRange(location: 0, length: attributedText.length)
+            attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+            // Preserve font and color for attributed text
+            attributedText.addAttribute(.font, value: button.titleLabel?.font ?? UIFont.systemFont(ofSize: 16), range: range)
+            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: action.textColor), range: range)
+            button.setAttributedTitle(attributedText, for: .normal)
+        }
+        
+        // Load custom font synchronously if provided
+        if let fontFamily = fontFamily, !fontFamily.isEmpty {
+            let styleString = action.style.lowercased() ?? "normal"
+            let customFont = FontManager.shared.loadFont(
+                family: fontFamily,
+                size: fontSize,
+                weight: action.fontWeight,
+                style: styleString
+            )
+            
+            InAppLogger.shared.debug("Action font loaded: \(customFont.fontName)")
+            button.titleLabel?.font = customFont
+            
+            // Apply underline if needed
+            if styleString == "underline" {
+                let attributedText = NSMutableAttributedString(string: action.text)
+                let range = NSRange(location: 0, length: attributedText.length)
+                attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+                attributedText.addAttribute(.font, value: customFont, range: range)
+                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: action.textColor), range: range)
+                button.setAttributedTitle(attributedText, for: .normal)
+            }
+        }
+        
+        // Add padding - supports single value or 4 values (top, right, bottom, left)
+        let padding = UIStyleParser.parsePadding(action.padding)
+        let adjustedPadding = UIEdgeInsets(
+            top: padding.top + extraHeight/2, 
+            left: padding.left, 
+            bottom: padding.bottom + extraHeight/2, 
+            right: padding.right
+        )
+        button.contentEdgeInsets = adjustedPadding
+        
+        // Configure button for multiline text support
+        button.titleLabel?.numberOfLines = 0
+        button.titleLabel?.lineBreakMode = .byWordWrapping
+        button.titleLabel?.textAlignment = .center
+        button.titleLabel?.adjustsFontSizeToFitWidth = false
+        
+        // Set content priorities
+        button.setContentCompressionResistancePriority(.required, for: .vertical)
+        button.setContentHuggingPriority(.required, for: .vertical)
+        
+        // Force button to recalculate size after all properties are set
+        button.invalidateIntrinsicContentSize()
+        button.setNeedsLayout()
+        
+        button.tag = actionIndex
+        return button
+    }
+    
+    // Label Creation
+    
+    /// Create label with common styling logic (shared between title and description)
+    private static func createStyledLabel(
+        text: String,
+        fontSize: Int,
+        fontWeight: Int,
+        color: String,
+        alignment: String,
+        style: String,
+        fontFamily: String?,
+        fontUrl: String?
+    ) -> UILabel {
+        let label = UILabel()
+        label.text = text
+        
+        // Set initial system font with 1.3x multiplier
+        let weight = UIStyleParser.parseFontWeight(fontWeight)
+        let calculatedFontSize = CGFloat(fontSize) * 1.3
+        let styleString = style.lowercased()
+        
+        // Create base system font
+        let baseFont = UIFont.systemFont(ofSize: calculatedFontSize, weight: weight)
+        
+        if styleString == "italic" {
+            let traits: UIFontDescriptor.SymbolicTraits = [.traitItalic]
+            if let descriptor = baseFont.fontDescriptor.withSymbolicTraits(traits) {
+                label.font = UIFont(descriptor: descriptor, size: calculatedFontSize)
+            } else {
+                label.font = baseFont
+            }
+        } else {
+            label.font = baseFont
+        }
+        
+        // Apply underline if specified
+        if styleString == "underline" {
+            let attributedText = NSMutableAttributedString(string: text)
+            let range = NSRange(location: 0, length: attributedText.length)
+            attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+            attributedText.addAttribute(.font, value: label.font!, range: range)
+            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: range)
+            label.attributedText = attributedText
+        }
+        
+        // Load custom font synchronously if provided
+        if let fontFamily = fontFamily, !fontFamily.isEmpty {
+            let customFont = FontManager.shared.loadFont(
+                family: fontFamily,
+                size: calculatedFontSize,
+                weight: fontWeight,
+                style: styleString
+            )
+            
+            InAppLogger.shared.debug("Label font: \(customFont.fontName)")
+            label.font = customFont
+            
+            // Apply styles with custom font
+            let alignmentLower = alignment.lowercased()
+            let attributedText = NSMutableAttributedString(string: text)
+            let range = NSRange(location: 0, length: attributedText.length)
+            
+            // Apply font and color
+            attributedText.addAttribute(.font, value: customFont, range: range)
+            attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: range)
+            
+            // Apply underline if needed
+            if styleString == "underline" {
+                attributedText.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: range)
+            }
+            
+            // Apply alignment with paragraph style
+            let paragraphStyle = createParagraphStyle(alignment: alignmentLower)
+            attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: range)
+            
+            label.attributedText = attributedText
+        }
+        
+        label.textColor = UIColor(hex: color)
+        
+        // Set text alignment
+        let alignmentLower = alignment.lowercased()
+        if alignmentLower == "justify" {
+            // For justify, ensure attributed text has proper paragraph style
+            if label.attributedText == nil {
+                let attributedText = NSMutableAttributedString(string: text)
+                attributedText.addAttribute(.font, value: label.font!, range: NSRange(location: 0, length: attributedText.length))
+                attributedText.addAttribute(.foregroundColor, value: UIColor(hex: color), range: NSRange(location: 0, length: attributedText.length))
+                
+                let paragraphStyle = createParagraphStyle(alignment: alignmentLower)
+                attributedText.addAttribute(.paragraphStyle, value: paragraphStyle, range: NSRange(location: 0, length: attributedText.length))
+                
+                label.attributedText = attributedText
+            }
+            label.textAlignment = .justified
+        } else {
+            label.textAlignment = UIStyleParser.parseTextAlignment(alignment)
+        }
+        
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        
+        // Set high content hugging to allow centering with spacers
+        label.setContentHuggingPriority(.defaultHigh, for: .vertical)
+        label.setContentCompressionResistancePriority(.required, for: .vertical)
+        
+        return label
+    }
+    
+    /// Create paragraph style with proper spacing settings
+    private static func createParagraphStyle(alignment: String) -> NSMutableParagraphStyle {
+        let paragraphStyle = NSMutableParagraphStyle()
+        
+        if alignment == "justify" {
+            paragraphStyle.alignment = .justified
+            paragraphStyle.hyphenationFactor = 1.0
+        } else {
+            paragraphStyle.alignment = UIStyleParser.parseTextAlignment(alignment)
+        }
+        
+        paragraphStyle.lineBreakMode = .byWordWrapping
+        paragraphStyle.paragraphSpacing = 0
+        paragraphStyle.paragraphSpacingBefore = 0
+        paragraphStyle.lineHeightMultiple = 1.0
+        paragraphStyle.lineSpacing = 0
+        
+        return paragraphStyle
+    }
+    
+    /// Create title label with font family support
+    static func createTitleLabel(for title: MessageTitle, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+        return createStyledLabel(
+            text: title.text,
+            fontSize: title.fontSize,
+            fontWeight: title.fontWeight,
+            color: title.color,
+            alignment: title.alignment,
+            style: title.style ?? "normal",
+            fontFamily: fontFamily,
+            fontUrl: fontUrl
+        )
+    }
+    
+    /// Create description label with font family support
+    static func createDescriptionLabel(for description: MessageDescription, fontFamily: String? = nil, fontUrl: String? = nil, forceFullWidth: Bool = false) -> UILabel {
+        return createStyledLabel(
+            text: description.text,
+            fontSize: description.fontSize,
+            fontWeight: description.fontWeight,
+            color: description.color,
+            alignment: description.alignment,
+            style: description.style ?? "normal",
+            fontFamily: fontFamily,
+            fontUrl: fontUrl
+        )
+    }
+    
+    // Image Creation
+    
+    /// Create image view with async loading
+    static func createImageView(for imageUrl: String, height: CGFloat = 200) -> UIImageView {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Load image asynchronously
+        loadImageAsync(from: imageUrl, into: imageView)
+        
+        // Don't set height constraint here - let the parent handle it
+        
+        return imageView
+    }
+    
+    /// Load image asynchronously
+    static func loadImageAsync(from urlString: String, into imageView: UIImageView) {
+        guard let url = URL(string: urlString) else { return }
+        
+        Task {
+            do {
+                let (data, _) = try await URLSession.shared.data(from: url)
+                let image = UIImage(data: data)
+                
+                await MainActor.run {
+                    imageView.image = image
+                }
+            } catch {
+                InAppLogger.shared.error("Failed to load image: \(error)")
+            }
+        }
+    }
+    
+    // Actions Container
+    
+    /// Create actions stack view (vertical for Template 1, horizontal for others)
+    static func createActionsView(for message: InAppMessage, fillWidth: Bool = false) -> UIView {
+        let stackView = UIStackView()
+        
+        // Use vertical layout for Template 1 (fullscreen) when fillWidth is true
+        if fillWidth {
+            stackView.axis = .vertical
+            stackView.spacing = 12  // More spacing between vertical buttons
+            stackView.distribution = .fill
+        } else {
+            stackView.axis = .horizontal
+            stackView.spacing = 8
+            stackView.distribution = .fillEqually
+        }
+        
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add action buttons with extra height for Template 1 (fullscreen)
+        let extraHeight: CGFloat = fillWidth ? 12 : 0  // Slightly taller for Template 1
+        for (index, action) in message.actions.enumerated() {
+            if action.enabled {
+                let button = createActionButton(for: action, actionIndex: index, extraHeight: extraHeight, fontFamily: message.style.fontFamily, fontUrl: message.style.fontUrl)
+                stackView.addArrangedSubview(button)
+            }
+        }
+        
+        return stackView
+    }
+}
+
+/// Style parsing utilities
+internal class UIStyleParser {
+    
+    /// Parse float value from string
+    static func parseFloat(_ value: String) -> CGFloat {
+        return CGFloat(Double(value.replacingOccurrences(of: "px", with: "")) ?? 0.0)
+    }
+    
+    /// Parse padding string to UIEdgeInsets - supports both single values and CSS-style multi-values
+    static func parsePadding(_ paddingString: String) -> UIEdgeInsets {
+        // Use the more advanced parser that handles 1, 2, and 4 values
+        return parsePaddingString(paddingString)
+    }
+    
+    /// Parse complex padding string like "48px 24px 48px 24px" to UIEdgeInsets
+    static func parsePaddingString(_ paddingString: String) -> UIEdgeInsets {
+        let components = paddingString.split(separator: " ").map { String($0) }
+        
+        switch components.count {
+        case 1:
+            // Single value: all sides
+            let value = parseFloat(components[0])
+            return UIEdgeInsets(top: value, left: value, bottom: value, right: value)
+        case 2:
+            // Two values: top/bottom, left/right
+            let vertical = parseFloat(components[0])
+            let horizontal = parseFloat(components[1])
+            return UIEdgeInsets(top: vertical, left: horizontal, bottom: vertical, right: horizontal)
+        case 4:
+            // Four values: top, right, bottom, left
+            let top = parseFloat(components[0])
+            let right = parseFloat(components[1])
+            let bottom = parseFloat(components[2])
+            let left = parseFloat(components[3])
+            return UIEdgeInsets(top: top, left: left, bottom: bottom, right: right)
+        default:
+            return UIEdgeInsets.zero
+        }
+    }
+    
+    /// Parse border radius string - supports CSS-style values (1, 2, or 4 values)
+    static func parseBorderRadius(_ radiusString: String) -> (topLeft: CGFloat, topRight: CGFloat, bottomRight: CGFloat, bottomLeft: CGFloat) {
+        let components = radiusString.split(separator: " ").map { String($0) }
+        
+        switch components.count {
+        case 1:
+            // Single value: all corners
+            let value = parseFloat(components[0])
+            return (topLeft: value, topRight: value, bottomRight: value, bottomLeft: value)
+        case 2:
+            // Two values: topLeft/bottomRight, topRight/bottomLeft
+            let value1 = parseFloat(components[0])
+            let value2 = parseFloat(components[1])
+            return (topLeft: value1, topRight: value2, bottomRight: value1, bottomLeft: value2)
+        case 4:
+            // Four values: topLeft, topRight, bottomRight, bottomLeft (not CSS order - backend specific)
+            let topLeft = parseFloat(components[0])
+            let topRight = parseFloat(components[1]) 
+            let bottomRight = parseFloat(components[2])
+            let bottomLeft = parseFloat(components[3])
+            return (topLeft: topLeft, topRight: topRight, bottomRight: bottomRight, bottomLeft: bottomLeft)
+        default:
+            // Invalid format - return zero
+            return (topLeft: 0, topRight: 0, bottomRight: 0, bottomLeft: 0)
+        }
+    }
+    
+    /// Apply border radius with CACornerMask support for individual corners (iOS 11+)
+    /// Note: CALayer limitation - different radius per corner not possible, fallback to average
+    static func applyBorderRadius(to view: UIView, radiusString: String) {
+        let borderRadius = parseBorderRadius(radiusString)
+        
+        // Check if all corners have the same radius
+        if borderRadius.topLeft == borderRadius.topRight &&
+           borderRadius.topRight == borderRadius.bottomRight &&
+           borderRadius.bottomRight == borderRadius.bottomLeft {
+            // All corners are the same - use simple cornerRadius
+            view.layer.cornerRadius = borderRadius.topLeft
+            view.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMaxYCorner]
+        } else {
+            // Different corners - CALayer limitation: can't have different radius per corner
+            // Use minimum non-zero radius to avoid oversized corners
+            let nonZeroValues = [borderRadius.topLeft, borderRadius.topRight, borderRadius.bottomRight, borderRadius.bottomLeft].filter { $0 > 0 }
+            let minRadius = nonZeroValues.isEmpty ? 0 : nonZeroValues.min() ?? 0
+            
+            view.layer.cornerRadius = minRadius
+            
+            // Build maskedCorners based on which corners should be rounded
+            var maskedCorners: CACornerMask = []
+            
+            if borderRadius.topLeft > 0 {
+                maskedCorners.insert(.layerMinXMinYCorner)
+            }
+            if borderRadius.topRight > 0 {
+                maskedCorners.insert(.layerMaxXMinYCorner)
+            }
+            if borderRadius.bottomLeft > 0 {
+                maskedCorners.insert(.layerMinXMaxYCorner)
+            }
+            if borderRadius.bottomRight > 0 {
+                maskedCorners.insert(.layerMaxXMaxYCorner)
+            }
+            
+            view.layer.maskedCorners = maskedCorners
+        }
+    }
+    
+    /// Parse font weight
+    static func parseFontWeight(_ weight: Int) -> UIFont.Weight {
+        switch weight {
+        case 100: return .ultraLight
+        case 200: return .thin
+        case 300: return .light
+        case 400: return .regular
+        case 500: return .medium
+        case 600: return .semibold
+        case 700: return .bold
+        case 800: return .heavy
+        case 900: return .black
+        default: return .regular
+        }
+    }
+    
+    /// Parse text alignment
+    static func parseTextAlignment(_ alignment: String) -> NSTextAlignment {
+        switch alignment.lowercased() {
+        case "center": return .center
+        case "right": return .right
+        case "left": return .left
+        case "justify": return .justified
+        default: return .left
+        }
+    }
+}
+
+// UIColor Extension
+extension UIColor {
+    convenience init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0)
+        }
+
+        self.init(
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            alpha: Double(a) / 255
+        )
+    }
+}
+
+/// Custom UIButton that properly respects contentEdgeInsets for multiline text
+/// This button calculates its height dynamically based on text content and padding
+class PaddedButton: UIButton {
+    
+    private var heightConstraint: NSLayoutConstraint?
+    
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        
+        // Only update height if we have actual width set (from constraints)
+        guard bounds.width > 0 else { return }
+        
+        updateHeightConstraint()
+    }
+    
+    private func updateHeightConstraint() {
+        guard let titleLabel = titleLabel, let text = titleLabel.text else {
+            return
+        }
+        
+        // Calculate text size with padding
+        let availableWidth = bounds.width - contentEdgeInsets.left - contentEdgeInsets.right
+        guard availableWidth > 0 else { return }
+        
+        let textSize = (text as NSString).boundingRect(
+            with: CGSize(width: availableWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: titleLabel.font as Any],
+            context: nil
+        ).size
+        
+        let requiredHeight = ceil(textSize.height) + contentEdgeInsets.top + contentEdgeInsets.bottom
+        
+        // Update or create height constraint
+        if let existing = heightConstraint {
+            if abs(existing.constant - requiredHeight) > 0.5 { // Only update if significantly different
+                existing.constant = requiredHeight
+                setNeedsLayout()
+            }
+        } else {
+            let constraint = heightAnchor.constraint(equalToConstant: requiredHeight)
+            constraint.priority = .required
+            constraint.isActive = true
+            heightConstraint = constraint
+        }
+    }
+}

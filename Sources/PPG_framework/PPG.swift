@@ -6,8 +6,12 @@
 //  Copyright © 2020 Goodylabs. All rights reserved.
 //
 
+import Foundation
 import UIKit
 import UserNotifications
+
+// Global bridge instance - initialized when PPG is first used
+private let subscriptionBridge = PushPushGoSubscriptionBridgeManager()
 
 public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
@@ -25,6 +29,16 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     public static func initializeNotifications(
         projectId: String, apiToken: String, appGroupId: String
     ) {
+        // Validate required parameters
+        guard !projectId.isEmpty else {
+            fatalError("PPG SDK: projectId cannot be empty")
+        }
+        guard !apiToken.isEmpty else {
+            fatalError("PPG SDK: apiToken cannot be empty")
+        }
+        
+        // Initialize bridge for In-App Messages communication
+        _ = subscriptionBridge // Force initialization
         SharedData.shared.appGroupId = appGroupId
         SharedData.shared.projectId = projectId
         SharedData.shared.apiToken = apiToken
@@ -32,6 +46,14 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         
         // Register default notification categories
         CategoryManager.addDefaultCategories()
+        
+        // Check current notification permissions on startup
+        // This will also clear subscriber data if permissions are denied
+        SharedData.shared.checkAndUpdateNotificationPermissions()
+        
+        // Check if user is already subscribed (has device token saved)
+        let hasDeviceToken = !SharedData.shared.deviceToken.isEmpty
+        SharedData.shared.isSubscribed = hasDeviceToken
     }
 
     public static func registerForNotifications(
@@ -43,7 +65,19 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ]) { granted, error in
             if let error = error {
                 print("Init Notifications error: \(error)")
+                // Update subscription status - permission denied
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
                 handler(.error(error.localizedDescription))
+                return
+            }
+
+            // Check if user granted permission
+            guard granted else {
+                print("Init Notifications denied by user")
+                // Clear subscriber data immediately when user denies
+                SharedData.shared.clearSubscriberData()
+                SharedData.shared.areNotificationsBlocked = true
+                handler(.error("User denied notification permissions"))
                 return
             }
 
@@ -51,6 +85,10 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 application.registerForRemoteNotifications()
             }
             print("Init Notifications success")
+            
+            // Update subscription status based on permission granted
+            // Note: This doesn't guarantee subscription yet - wait for device token
+            SharedData.shared.checkAndUpdateNotificationPermissions()
 
             handler(.success)
         }
@@ -73,13 +111,19 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         print("Device token \(key)")
 
         if oldKey == key {
-            handler(.error("Token already sent"))
+            // Token already registered
+            handler(.success)
             return
         }
 
         ApiService.shared.subscribeUser(token: key) { result in
             if case .success = result {
                 SharedData.shared.deviceToken = key
+                // Successfully subscribed - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: true)
+            } else {
+                // Failed to subscribe - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
             }
 
             handler(result)
@@ -96,6 +140,13 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
 
         ApiService.shared.subscribeUser(token: token) { result in
+            if case .success = result {
+                // Successfully re-subscribed - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: true)
+            } else {
+                // Failed to re-subscribe - update status
+                SharedData.shared.updateSubscriptionStatus(isSubscribed: false)
+            }
             handler(result)
         }
     }
@@ -105,8 +156,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     ) {
         ApiService.shared.unsubscribeUser { result in
             if case .success = result {
-                SharedData.shared.deviceToken = ""
-                SharedData.shared.subscriberId = ""
+                // Clear all subscriber data
+                SharedData.shared.clearSubscriberData()
             }
 
             handler(result)
