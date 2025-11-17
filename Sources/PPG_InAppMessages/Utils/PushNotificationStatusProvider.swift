@@ -1,6 +1,43 @@
 import Foundation
 import UIKit
 
+/// Interface for requesting push notification subscription.
+/// This provides a clean way for the in-app messages to trigger a subscription request
+/// without directly depending on the push notification SDK.
+public protocol PushNotificationSubscriber {
+    /// Request user to subscribe to push notifications
+    ///
+    /// - Parameter viewController: The view controller to present permission dialogs
+    /// - Returns: true if the subscription request was successfully initiated
+    func requestSubscription(viewController: UIViewController) async -> Bool
+}
+
+@objc public protocol PushNotificationSubscriberObjC {
+    @objc func requestSubscription(
+        withViewController viewController: UIViewController,
+        completion: @escaping (Bool) -> Void
+    )
+}
+
+internal final class PushNotificationSubscriberObjCAdapter: PushNotificationSubscriber {
+    private weak var subscriber: PushNotificationSubscriberObjC?
+
+    init(_ subscriber: PushNotificationSubscriberObjC) {
+        self.subscriber = subscriber
+    }
+
+    func requestSubscription(viewController: UIViewController) async -> Bool {
+        await withCheckedContinuation { continuation in
+            subscriber?.requestSubscription(
+                withViewController: viewController,
+                completion: { result in
+                    continuation.resume(returning: result)
+                }
+            )
+        }
+    }
+}
+
 /// Utility class for accessing push notification subscription state
 /// from the PushPushGo SDK's UserDefaults.
 /// 
@@ -56,19 +93,6 @@ internal class PushNotificationStatusProvider {
             return isNotificationsBlocked()
         }
     }
-}
-
-// Bridge Protocol
-
-/// Interface for requesting push notification subscription.
-/// This provides a clean way for the in-app messages to trigger a subscription request
-/// without directly depending on the push notification SDK.
-internal protocol PushNotificationSubscriber {
-    /// Request user to subscribe to push notifications
-    /// 
-    /// - Parameter viewController: The view controller to present permission dialogs
-    /// - Returns: true if the subscription request was successfully initiated
-    func requestSubscription(viewController: UIViewController) async -> Bool
 }
 
 /// NotificationCenter-based implementation that communicates with Push SDK
@@ -136,10 +160,3 @@ internal class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
         }
     }
 }
-
-// Objective-C Bridge Helper
-// This selector is used for runtime method discovery
-@objc protocol PushSubscriptionBridgeObjC {
-    @objc func requestSubscriptionObjC(viewController: UIViewController) -> NSNumber
-}
-

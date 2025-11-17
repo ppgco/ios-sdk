@@ -22,7 +22,7 @@ import UIKit
     private var currentRoute: String = ""
     
     // Bridge to push SDK
-    private var subscriptionHandler: PushNotificationSubscriber = DefaultPushNotificationSubscriber()
+    private var pushNotificationSubscriber: PushNotificationSubscriber = DefaultPushNotificationSubscriber()
     
     private override init() {
         super.init()
@@ -85,7 +85,7 @@ import UIKit
             onMessageEvent: { [weak self] eventType, message, ctaIndex in
                 self?.onMessageEvent(eventType, message, ctaIndex)
             },
-            subscriptionHandler: subscriptionHandler
+            pushNotificationSubscriber: pushNotificationSubscriber
         )
         self.messageManager = InAppMessageManager(repository: repository!, displayer: messageDisplayer!)
         
@@ -102,6 +102,15 @@ import UIKit
     @objc public func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
         messageManager?.setCustomCodeActionHandler(handler)
         InAppLogger.shared.debug("Custom code action handler set")
+    }
+  
+    /// Set handler for requesting a custom push notification subscription.
+    public func setCustomPushNotificationSubscriber(_ subscriber: PushNotificationSubscriber) {
+      messageDisplayer?.setCustomPushNotificationSubscriber(subscriber)
+    }
+
+    @objc public func setCustomPushNotificationSubscriberObjC(_ subscriber: PushNotificationSubscriberObjC) {
+      messageDisplayer?.setCustomPushNotificationSubscriber(PushNotificationSubscriberObjCAdapter(subscriber))
     }
     
     /// Handle view controller lifecycle

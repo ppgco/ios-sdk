@@ -20,7 +20,7 @@ internal class InAppMessageDisplayer {
     // Callbacks
     private let onMessageDismissed: () -> Void
     private let onMessageEvent: (String, InAppMessage, Int?) -> Void
-    private let subscriptionHandler: PushNotificationSubscriber
+    private var pushNotificationSubscriber: PushNotificationSubscriber
     
     // Custom code action handler (optional)
     private var customCodeActionHandler: ((String) -> Void)?
@@ -67,11 +67,11 @@ internal class InAppMessageDisplayer {
     init(
         onMessageDismissed: @escaping () -> Void,
         onMessageEvent: @escaping (String, InAppMessage, Int?) -> Void,
-        subscriptionHandler: PushNotificationSubscriber
+        pushNotificationSubscriber: PushNotificationSubscriber
     ) {
         self.onMessageDismissed = onMessageDismissed
         self.onMessageEvent = onMessageEvent
-        self.subscriptionHandler = subscriptionHandler
+        self.pushNotificationSubscriber = pushNotificationSubscriber
     }
     
     // Public Methods
@@ -81,6 +81,10 @@ internal class InAppMessageDisplayer {
     /// - Parameter handler: Function that takes custom code string and processes it
     func setCustomCodeActionHandler(_ handler: @escaping (String) -> Void) {
         self.customCodeActionHandler = handler
+    }
+  
+    func setCustomPushNotificationSubscriber(_ subscriber: PushNotificationSubscriber) {
+      self.pushNotificationSubscriber = subscriber
     }
     
     /// Show message using appropriate template
@@ -516,7 +520,7 @@ internal class InAppMessageDisplayer {
         }
         
         Task {
-            let success = await subscriptionHandler.requestSubscription(viewController: viewController)
+            let success = await pushNotificationSubscriber.requestSubscription(viewController: viewController)
             
             DispatchQueue.main.async {
                 // Show Toast message like Android
