@@ -83,7 +83,15 @@ class EventManager {
         
         let allEvents = getEventsUnsafe()
         let validEvents = allEvents.filter { !$0.canDelete() }
-        let eventsToSend = validEvents.filter { !$0.wasSent() }
+        var unsendEvents = validEvents.filter { !$0.wasSent() }
+        
+        // Deduplicate unsent events: keep only first event per campaign/type/button
+        var eventsToSend: [Event] = []
+        for event in unsendEvents {
+            if !eventsToSend.contains(where: { $0.softEquals(event) }) {
+                eventsToSend.append(event)
+            }
+        }
         
         guard !eventsToSend.isEmpty else {
             isSyncing = false
@@ -125,13 +133,15 @@ class EventManager {
         eventQueue.async {
             var events = self.getEventsUnsafe()
             
+            let eventKey = event.getKey()
+            
+            // Check for duplicate events (max 1 event per campaign/type/button)
             if events.contains(where: { $0.softEquals(event) }) {
                 DispatchQueue.main.async {
-                    handler(.error("Event was sent before. Omitting"))
+                    handler(.error("Event of this type for this campaign was already registered. Omitting"))
                 }
                 return
             }
-            
             events.append(event)
             self.setEventsUnsafe(events: events)
 
@@ -173,7 +183,7 @@ class EventManager {
     //Storage methods
     
     private func loadEventsFromStorage() -> [Event] {
-        guard let data = self.sharedData.sharedDefaults?.data(forKey: "SavedPPGEvents") else {
+        guard let data = self.sharedData.sharedDefaults.data(forKey: "SavedPPGEvents") else {
             return []
         }
         
@@ -207,7 +217,7 @@ class EventManager {
         
         do {
             let data = try encoder.encode(events)
-            self.sharedData.sharedDefaults?.set(data, forKey: "SavedPPGEvents")
+            self.sharedData.sharedDefaults.set(data, forKey: "SavedPPGEvents")
         } catch {
             print("PPG EventManager: Encoding error: \(error)")
         }
@@ -273,7 +283,7 @@ class EventManager {
 
     public func clearEvents() {
         eventQueue.async {
-            self.sharedData.sharedDefaults?.removeObject(forKey: "SavedPPGEvents")
+            self.sharedData.sharedDefaults.removeObject(forKey: "SavedPPGEvents")
             self.invalidateCache()
         }
     }
