@@ -1,6 +1,20 @@
 #  Setup Guide
 
 > [!IMPORTANT]
+> **Version 4.0.0 - Major Release**
+>
+> 🎉 **New Feature: In-App Messages SDK**
+> 
+> This release introduces a powerful In-App Messages module that allows you to display targeted messages to your users.
+> For detailed integration guide and documentation, see [In-App Messages README](Sources/PPG_InAppMessages/README.md).
+>
+> **What's New:**
+> - ✅ In-App Messages SDK with audience targeting and custom triggers
+> - ✅ Enhanced duplicate event prevention for delivered events
+> - ✅ Improved stability and performance
+>
+> ---
+> 
 > **Version 3.0.3**
 >
 > Welcome back Cocoapods - from this version you can integrate via:
