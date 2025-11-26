@@ -13,6 +13,7 @@ Display personalized in-app messages to your iOS app users with rich content, sm
 ### Swift Package Manager (Recommended)
 
 In Xcode:
+
 1. File → Add Package Dependencies...
 2. Enter: `https://github.com/ppgco/ios-sdk`
 3. Select `PPG_InAppMessages` product
@@ -20,10 +21,11 @@ In Xcode:
 ### CocoaPods
 
 ```ruby
-pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.0.1'
+pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.1'
 ```
 
 Then run:
+
 ```bash
 pod install
 ```
@@ -51,7 +53,7 @@ struct YourApp: App {
             projectId: "YOUR_PROJECT_ID"
         )
     }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()
@@ -97,34 +99,34 @@ import PPG_InAppMessages
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
-    
-    func application(_ application: UIApplication, 
+
+    func application(_ application: UIApplication,
                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        
+
         // Initialize SDK once at app launch
         InAppMessagesSDK.shared.initialize(
             apiKey: "YOUR_API_KEY",
             projectId: "YOUR_PROJECT_ID"
         )
-        
+
         return true
     }
 }
 
 class HomeViewController: UIViewController {
-    
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
+
         InAppMessagesSDK.shared.onRouteChanged("home")
     }
 }
 
 class ProductsViewController: UIViewController {
-    
+
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        
+
         InAppMessagesSDK.shared.onRouteChanged("products")
     }
 }
@@ -164,12 +166,27 @@ Execute your own code when users click buttons with custom actions:
 // Set handler during app initialization
 InAppMessagesSDK.shared.setCustomCodeActionHandler { customCode in
     print("User clicked button with custom code: \(customCode)")
-    
+
     // Example: Navigate to specific screen
     if customCode == "navigate_to_shop" {
         // Your navigation logic
     }
 }
+```
+
+### Set Custom Push Notification Subscriber
+
+Execute your own code when users click a button with "Subscribe to notifications" action
+
+```swift
+final class MyPushNotificationSubscriber: PushNotificationSubscriber {
+    func requestSubscription(viewController: UIViewController) async -> Bool {
+        // ...
+    }
+}
+
+// Set handler during app initialization
+InAppMessagesSDK.shared.setCustomPushNotificationSubscriber(MyPushNotificationSubscriber())
 ```
 
 ### Clear Cache
@@ -201,7 +218,7 @@ Looking for more examples? Check out **[Examples.md](Examples.md)** for more com
 Create and configure messages in your PushPushGo dashboard:
 
 - **Templates:** Choose from Fullscreen, Modal, or Banner
-- **Content:** Add images, text, buttons with actions (URL, Close, or Custom Code)
+- **Content:** Add images, text, buttons with actions (URL, Close, Custom Code or Subscribe to Push Notifications)
 - **Display Rules:** "Show once", "Show after X seconds", or "Always show"
 - **Targeting:** Specific routes (e.g., "home", "checkout"), user audience, devices
 - **Triggers:** On route enter or custom trigger events
@@ -209,6 +226,7 @@ Create and configure messages in your PushPushGo dashboard:
 ### 2. SDK Checks for Messages
 
 The SDK automatically checks for eligible messages when:
+
 - User navigates to a new screen (via `onRouteChanged`)
 - Custom trigger fires (via `showMessagesOnTrigger`)
 - Every 60 seconds (background timer)
@@ -216,6 +234,7 @@ The SDK automatically checks for eligible messages when:
 ### 3. Display Logic
 
 Messages are displayed if they match:
+
 - ✅ Current route (if route-based)
 - ✅ Trigger key-value pair (if trigger-based)
 - ✅ Display history (respects "show once" / "show after time" rules)
@@ -227,6 +246,7 @@ Messages are displayed if they match:
 ### Messages not showing?
 
 **1. Enable debug logging**
+
 ```swift
 InAppMessagesSDK.shared.initialize(
     apiKey: "...",
@@ -236,20 +256,24 @@ InAppMessagesSDK.shared.initialize(
 ```
 
 **2. Check route matches backend config**
+
 - Route name in code must exactly match dashboard configuration
 - Example: `onRouteChanged("home")` matches dashboard route "home"
 
 **3. Clear cache when testing**
+
 ```swift
 InAppMessagesSDK.shared.clearMessageCache()
 ```
 
 **4. Verify display rules**
+
 - Messages with "Show once" won't appear after being dismissed
 - Messages with "Show after time" require waiting period
 - Check that message is enabled in dashboard
 
 **5. Check targeting**
+
 - Verify user audience matches (subscribers vs non-subscribers)
 - Confirm device and OS targeting includes iOS
 
@@ -274,6 +298,9 @@ showMessagesOnTrigger(key: String, value: String)
 // Handle custom button actions
 setCustomCodeActionHandler(_ handler: @escaping (String) -> Void)
 
+// Set custom push notifications subscriber
+setCustomPushNotificationSubscriber(_ subscriber: PushNotificationSubscriber)
+
 // Clear cache (useful for testing)
 clearMessageCache()
 ```
@@ -295,5 +322,6 @@ refreshActiveMessages(viewController: UIViewController)
 ## Support
 
 For issues, feature requests, or questions:
+
 - GitHub Issues: https://github.com/ppgco/ios-sdk/issues
 - Documentation: https://docs.pushpushgo.com

@@ -53,7 +53,7 @@ Choose one of options:
 #### Cocoapods
 In your **Podfile** add to the application target:
 ```bash
-    pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.0.1'
+    pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.0.0'
 ```
 Then run
 
