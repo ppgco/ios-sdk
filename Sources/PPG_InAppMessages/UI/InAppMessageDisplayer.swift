@@ -213,57 +213,18 @@ internal class InAppMessageDisplayer {
         
         messageView.addSubview(closeButton)
         
-        // Close button stays at fixed offset from edge (border is part of messageView)
-        let offset: CGFloat = 0
-        
         guard let message = currentMessage else { return }
-        let templateType = TemplateType.from(message.template)
         
-        // For all templates, try to position relative to inner content (mainStack)
-        // This ensures the X button is inside the border, not under it
-        if let mainStack = findMainStack(in: messageView) {
-            switch templateType {
-            case .fullscreen:
-                // Template 1: Position relative to image section (top of vertical stack)
-                if let imageSection = mainStack.arrangedSubviews.first {
-                    NSLayoutConstraint.activate([
-                        closeButton.topAnchor.constraint(equalTo: imageSection.topAnchor, constant: offset),
-                        closeButton.trailingAnchor.constraint(equalTo: imageSection.trailingAnchor, constant: -offset)
-                    ])
-                } else {
-                    // Fallback to mainStack
-                    NSLayoutConstraint.activate([
-                        closeButton.topAnchor.constraint(equalTo: mainStack.topAnchor, constant: offset),
-                        closeButton.trailingAnchor.constraint(equalTo: mainStack.trailingAnchor, constant: -offset)
-                    ])
-                }
-                
-            case .desktop, .horizontal:
-                // Template 2 & 3: Position relative to mainStack (horizontal layout)
-                NSLayoutConstraint.activate([
-                    closeButton.topAnchor.constraint(equalTo: mainStack.topAnchor, constant: offset),
-                    closeButton.trailingAnchor.constraint(equalTo: mainStack.trailingAnchor, constant: -offset)
-                ])
-            }
-        } else {
-            // Fallback: position relative to messageView (shouldn't happen)
-            NSLayoutConstraint.activate([
-                closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
-                closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
-            ])
-        }
-    }
-    
-    /// Helper method to find the main stack in any template
-    /// All templates have a UIStackView as the main content container
-    private func findMainStack(in view: UIView) -> UIStackView? {
-        // The main stack is always the first direct UIStackView subview
-        for subview in view.subviews {
-            if let stackView = subview as? UIStackView {
-                return stackView
-            }
-        }
-        return nil
+        // Position close button at the corner, only accounting for border width
+        let borderWidth = message.style.border ? CGFloat(message.style.borderWidth) : 0
+        
+        // Small offset to keep button inside the border, stable regardless of button size
+        let offset = borderWidth + 2
+        
+        NSLayoutConstraint.activate([
+            closeButton.topAnchor.constraint(equalTo: messageView.topAnchor, constant: offset),
+            closeButton.trailingAnchor.constraint(equalTo: messageView.trailingAnchor, constant: -offset)
+        ])
     }
     
     /// Setup constraints using template-specific methods

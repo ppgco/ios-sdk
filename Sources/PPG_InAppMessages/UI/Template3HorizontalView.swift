@@ -168,7 +168,10 @@ internal class Template3HorizontalView {
         textView.addSubview(textStack)
         
         // Apply paddingBody to the text container (title + description content)
-        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        var paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
+        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
+        paddingBody.right += closeButtonReservedSpace
         
         // Set proper priorities to ensure text content is never cut off
         textStack.setContentCompressionResistancePriority(.required, for: .vertical)
@@ -177,7 +180,7 @@ internal class Template3HorizontalView {
         NSLayoutConstraint.activate([
             textStack.topAnchor.constraint(equalTo: textView.topAnchor, constant: paddingBody.top),
             textStack.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: paddingBody.left),
-            textStack.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: 0),
+            textStack.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -paddingBody.right),
             textStack.bottomAnchor.constraint(equalTo: textView.bottomAnchor, constant: -paddingBody.bottom)
         ])
         

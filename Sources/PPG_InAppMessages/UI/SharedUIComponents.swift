@@ -13,16 +13,13 @@ internal class SharedUIComponents {
         
         let iconSize = CGFloat(style.closeIconWidth)
         button.titleLabel?.font = UIFont.systemFont(ofSize: iconSize, weight: .medium)
-        button.backgroundColor = UIColor.white.withAlphaComponent(0.8)
-        button.layer.cornerRadius = iconSize / 2
         button.translatesAutoresizingMaskIntoConstraints = false
         
-        // Set size based on closeIconWidth
-        let buttonSize = iconSize * 1.8 // Make button slightly larger than icon
-        button.widthAnchor.constraint(equalToConstant: buttonSize).isActive = true
-        button.heightAnchor.constraint(equalToConstant: buttonSize).isActive = true
+        // Set size to match icon size
+        button.widthAnchor.constraint(equalToConstant: iconSize).isActive = true
+        button.heightAnchor.constraint(equalToConstant: iconSize).isActive = true
         
-        // CRITICAL FIX: Set tag to -1 to distinguish from action buttons (which have tag >= 0)
+        // Set tag to -1 to distinguish from action buttons (which have tag >= 0)
         button.tag = -1
         
         return button

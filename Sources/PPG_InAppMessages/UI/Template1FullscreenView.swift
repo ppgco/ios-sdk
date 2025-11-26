@@ -162,9 +162,13 @@ internal class Template1FullscreenView {
         
         sectionView.addSubview(contentStack)
         
+        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
+        
         if shouldCenterContent {
             // When padding is zero, stretch full width and center vertically
-            let paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
+            var paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
+            paddingValues.right += closeButtonReservedSpace
+            
             NSLayoutConstraint.activate([
                 contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
                 contentStack.centerYAnchor.constraint(equalTo: sectionView.centerYAnchor),
@@ -173,11 +177,14 @@ internal class Template1FullscreenView {
             ])
         } else {
             // When paddingBody has values, apply all four sides padding (no centering)
+            var adjustedPaddingBody = paddingBody
+            adjustedPaddingBody.right += closeButtonReservedSpace
+            
             NSLayoutConstraint.activate([
-                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: paddingBody.top),
-                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingBody.left),
-                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right),
-                contentStack.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor, constant: -paddingBody.bottom)
+                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: adjustedPaddingBody.top),
+                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: adjustedPaddingBody.left),
+                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -adjustedPaddingBody.right),
+                contentStack.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor, constant: -adjustedPaddingBody.bottom)
             ])
         }
         

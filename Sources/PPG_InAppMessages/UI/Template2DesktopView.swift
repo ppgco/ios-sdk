@@ -126,9 +126,12 @@ internal class Template2DesktopView {
         
         contentView.addSubview(contentStack)
         
-        // No padding here - it's already applied at the main stack level
         // Apply paddingBody to the content container (title + description + actions)
-        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        var paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
+        // Add extra right padding to prevent title/description from overlapping close button
+        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
+        paddingBody.right += closeButtonReservedSpace
         
         NSLayoutConstraint.activate([
             contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingBody.top),
