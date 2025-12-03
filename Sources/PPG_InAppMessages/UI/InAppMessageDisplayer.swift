@@ -252,7 +252,6 @@ internal class InAppMessageDisplayer {
         
         // Get screen dimensions and safe area
         let screenWidth = window.bounds.width
-        let screenHeight = window.bounds.height
         let safeArea = window.safeAreaInsets
         
         var constraints: [NSLayoutConstraint] = []
@@ -480,10 +479,11 @@ internal class InAppMessageDisplayer {
             return
         }
         
-        Task {
+        Task { [weak self] in
+            guard let self = self else { return }
             let success = await pushNotificationSubscriber.requestSubscription(viewController: viewController)
             
-            DispatchQueue.main.async {
+            await MainActor.run {
                 // Show Toast message like Android
                 self.showToast(message: success ? 
                     "Successfully subscribed to notifications!" : 

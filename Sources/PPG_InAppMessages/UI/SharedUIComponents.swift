@@ -43,7 +43,7 @@ internal class SharedUIComponents {
         let fontSize = CGFloat(action.fontSize) * 1.3
         
         // Apply style if specified
-        let styleString = action.style.lowercased() ?? "normal"
+        let styleString = action.style.lowercased()
         
         if styleString == "italic" {
             let traits: UIFontDescriptor.SymbolicTraits = [.traitItalic]
@@ -69,7 +69,7 @@ internal class SharedUIComponents {
         
         // Load custom font synchronously if provided
         if let fontFamily = fontFamily, !fontFamily.isEmpty {
-            let styleString = action.style.lowercased() ?? "normal"
+            let styleString = action.style.lowercased()
             let customFont = FontManager.shared.loadFont(
                 family: fontFamily,
                 size: fontSize,
@@ -256,7 +256,7 @@ internal class SharedUIComponents {
             fontWeight: title.fontWeight,
             color: title.color,
             alignment: title.alignment,
-            style: title.style ?? "normal",
+            style: title.style,
             fontFamily: fontFamily,
             fontUrl: fontUrl
         )
@@ -270,7 +270,7 @@ internal class SharedUIComponents {
             fontWeight: description.fontWeight,
             color: description.color,
             alignment: description.alignment,
-            style: description.style ?? "normal",
+            style: description.style,
             fontFamily: fontFamily,
             fontUrl: fontUrl
         )

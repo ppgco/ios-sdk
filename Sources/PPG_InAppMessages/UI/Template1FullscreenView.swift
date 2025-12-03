@@ -166,7 +166,7 @@ internal class Template1FullscreenView {
         
         if shouldCenterContent {
             // When padding is zero, stretch full width and center vertically
-            var paddingValues = UIStyleParser.parsePadding(message.layout.padding ?? "20px")
+            var paddingValues = UIStyleParser.parsePadding(message.layout.padding)
             paddingValues.right += closeButtonReservedSpace
             
             NSLayoutConstraint.activate([

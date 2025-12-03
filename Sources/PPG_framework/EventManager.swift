@@ -83,7 +83,7 @@ class EventManager {
         
         let allEvents = getEventsUnsafe()
         let validEvents = allEvents.filter { !$0.canDelete() }
-        var unsendEvents = validEvents.filter { !$0.wasSent() }
+        let unsendEvents = validEvents.filter { !$0.wasSent() }
         
         // Deduplicate unsent events: keep only first event per campaign/type/button
         var eventsToSend: [Event] = []
@@ -132,8 +132,6 @@ class EventManager {
     public func register(event: Event, handler: @escaping (_ result: ActionResult) -> Void) {
         eventQueue.async {
             var events = self.getEventsUnsafe()
-            
-            let eventKey = event.getKey()
             
             // Check for duplicate events (max 1 event per campaign/type/button)
             if events.contains(where: { $0.softEquals(event) }) {

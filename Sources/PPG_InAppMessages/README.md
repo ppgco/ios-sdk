@@ -21,7 +21,7 @@ In Xcode:
 ### CocoaPods
 
 ```ruby
-pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.1'
+pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.2'
 ```
 
 Then run:

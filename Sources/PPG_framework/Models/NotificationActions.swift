@@ -91,7 +91,6 @@ public struct CategoryManager {
             return []
         }
         
-        let now = Date()
         return storedCategories.filter { !$0.isExpired }
     }
     

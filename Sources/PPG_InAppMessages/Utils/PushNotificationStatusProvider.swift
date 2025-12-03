@@ -97,6 +97,40 @@ internal class PushNotificationStatusProvider {
 
 /// NotificationCenter-based implementation that communicates with Push SDK
 /// without direct dependencies. Uses notification pattern for loose coupling.
+/// Thread-safe wrapper for subscription state
+private final class SubscriptionState: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _hasResumed = false
+    private var _observer: NSObjectProtocol?
+    
+    var hasResumed: Bool {
+        get { lock.lock(); defer { lock.unlock() }; return _hasResumed }
+        set { lock.lock(); defer { lock.unlock() }; _hasResumed = newValue }
+    }
+    
+    var observer: NSObjectProtocol? {
+        get { lock.lock(); defer { lock.unlock() }; return _observer }
+        set { lock.lock(); defer { lock.unlock() }; _observer = newValue }
+    }
+    
+    func tryResume() -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        if _hasResumed { return false }
+        _hasResumed = true
+        return true
+    }
+    
+    func cleanup() {
+        lock.lock()
+        defer { lock.unlock() }
+        if let obs = _observer {
+            NotificationCenter.default.removeObserver(obs)
+            _observer = nil
+        }
+    }
+}
+
 internal class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
     
     private static let tag = "DefaultPushSubscriber"
@@ -105,27 +139,16 @@ internal class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
     
     func requestSubscription(viewController: UIViewController) async -> Bool {
         return await withCheckedContinuation { continuation in
-            // Track if continuation has been resumed to prevent double resume
-            var hasResumed = false
-            let resumeLock = NSLock()
+            let state = SubscriptionState()
             
             // Create observer for response
-            var observer: NSObjectProtocol?
-            observer = NotificationCenter.default.addObserver(
+            state.observer = NotificationCenter.default.addObserver(
                 forName: NSNotification.Name("PPGSubscriptionResult"),
                 object: nil,
                 queue: .main
             ) { notification in
-                resumeLock.lock()
-                defer { resumeLock.unlock() }
-                
-                guard !hasResumed else { return }
-                hasResumed = true
-                
-                // Clean up observer
-                if let observer = observer {
-                    NotificationCenter.default.removeObserver(observer)
-                }
+                guard state.tryResume() else { return }
+                state.cleanup()
                 
                 // Get result from notification
                 let success = notification.userInfo?["success"] as? Bool ?? false
@@ -135,15 +158,8 @@ internal class DefaultPushNotificationSubscriber: PushNotificationSubscriber {
             
             // Set timeout in case no response comes
             DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
-                resumeLock.lock()
-                defer { resumeLock.unlock() }
-                
-                guard !hasResumed else { return }
-                hasResumed = true
-                
-                if let observer = observer {
-                    NotificationCenter.default.removeObserver(observer)
-                }
+                guard state.tryResume() else { return }
+                state.cleanup()
                 InAppLogger.shared.error("Subscription request timeout")
                 continuation.resume(returning: false)
             }

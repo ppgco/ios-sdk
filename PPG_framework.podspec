@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PPG_framework'
-  s.version          = '4.1.1'
+  s.version          = '4.1.2'
   s.summary          = 'PushPushGo SDK for iOS.'
 
   # A more detailed description of the pod.

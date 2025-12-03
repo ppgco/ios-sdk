@@ -372,6 +372,11 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         let (responseUrl, isUniversalLink) = PPG.getUrlFromNotificationResponse(response: response)
         
         if let url = responseUrl {
+            // Get UIApplication.shared safely using reflection
+            guard let sharedApplication = UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication else {
+                completionHandler()
+                return
+            }
             
             if isUniversalLink {
                 // Handle as Universal Link using NSUserActivity
@@ -380,18 +385,18 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 
                 DispatchQueue.main.async {
                     // Pass to app delegate
-                    if let appDelegate = UIApplication.shared.delegate,
+                    if let appDelegate = sharedApplication.delegate,
                        appDelegate.responds(to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))) {
-                        appDelegate.application?(UIApplication.shared, continue: userActivity, restorationHandler: { _ in })
+                        _ = appDelegate.application?(sharedApplication, continue: userActivity, restorationHandler: { _ in })
                     } else {
                         // Fallback if app delegate can't handle it
-                        UIApplication.shared.open(url)
+                        sharedApplication.open(url)
                     }
                 }
             } else {
                 // Open as regular URL in browser
                 DispatchQueue.main.async {
-                    UIApplication.shared.open(url)
+                    sharedApplication.open(url)
                 }
             }
         }

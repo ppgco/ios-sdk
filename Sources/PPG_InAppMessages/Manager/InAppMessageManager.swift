@@ -330,7 +330,7 @@ internal class InAppMessageManager {
             try? await Task.sleep(nanoseconds: UInt64(delaySeconds) * 1_000_000_000)
         }
         
-        DispatchQueue.main.async {
+        await MainActor.run {
             displayer.showMessage(message, in: viewController)
         }
         

@@ -27,17 +27,23 @@ import UIKit
     }
     
     @objc private func handleSubscriptionRequest(_ notification: Notification) {
-        guard let viewController = notification.userInfo?["viewController"] as? UIViewController else {
+        guard notification.userInfo?["viewController"] is UIViewController else {
+            sendResult(success: false)
+            return
+        }
+        
+        // Get UIApplication.shared safely using reflection
+        guard let sharedApplication = UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication else {
             sendResult(success: false)
             return
         }
         
         // Use existing PPG.registerForNotifications API
-        PPG.registerForNotifications(application: UIApplication.shared) { [weak self] result in
+        PPG.registerForNotifications(application: sharedApplication) { [weak self] result in
             switch result {
             case .success:
                 self?.sendResult(success: true)
-            case .error(let message):
+            case .error:
                 self?.sendResult(success: false)
             }
         }
