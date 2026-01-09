@@ -39,18 +39,22 @@ internal class Template3HorizontalView {
         let shouldShowImage = message.image != nil && !message.image!.url.isEmpty && !message.image!.hideOnMobile
         
         if shouldShowImage {
-            // Left section - Image (20% width)
-            let mainPadding = UIStyleParser.parsePadding(message.layout.padding)
-            let imageSection = createImageSection(for: message.image!, padding: mainPadding)
+            // Left section - Image
+            // Use paddingBody to align image with text content (top and bottom)
+            let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+            let imageSection = createImageSection(for: message.image!, topPadding: paddingBody.top, bottomPadding: paddingBody.bottom)
             mainStack.addArrangedSubview(imageSection)
             
-            // Set image width to account for padding: 60px image + padding.left + 8px margin
-            let imageWidth = 60 + mainPadding.left + 8
+            // Set image width: 60px image
+            let imageWidth: CGFloat = 60
             imageSection.widthAnchor.constraint(equalToConstant: imageWidth).isActive = true
         }
         
         // Middle section - Title and Description 
-        let textSection = createTextSection(for: message)
+        // Pass hasActions flag and layoutPaddingRight to determine right padding
+        let hasActions = !message.actions.isEmpty
+        let layoutPadding = UIStyleParser.parsePadding(message.layout.padding)
+        let textSection = createTextSection(for: message, hasActions: hasActions, layoutPaddingRight: layoutPadding.right)
         contentActionsStack.addArrangedSubview(textSection)
         
         // Set text section to be flexible
@@ -61,7 +65,9 @@ internal class Template3HorizontalView {
         // Right section - Actions (35% width)
         var actionsSection: UIView? = nil
         if !message.actions.isEmpty {
-            actionsSection = createActionsSection(for: message)
+            // Pass layout.padding so closeIcon padding can account for it
+            let layoutPadding = UIStyleParser.parsePadding(message.layout.padding)
+            actionsSection = createActionsSection(for: message, layoutPaddingRight: layoutPadding.right)
             contentActionsStack.addArrangedSubview(actionsSection!)
             
             // Allow actions section to expand vertically as needed
@@ -104,8 +110,8 @@ internal class Template3HorizontalView {
         return containerView
     }
     
-    /// Create image section (left side - 20% width, small square in upper part)
-    private static func createImageSection(for image: MessageImage, padding: UIEdgeInsets = .zero) -> UIView {
+    /// Create image section (left side, small square aligned with text content)
+    private static func createImageSection(for image: MessageImage, topPadding: CGFloat = 0, bottomPadding: CGFloat = 0) -> UIView {
         let imageContainer = UIView()
         imageContainer.translatesAutoresizingMaskIntoConstraints = false
         
@@ -119,20 +125,23 @@ internal class Template3HorizontalView {
         
         imageContainer.addSubview(imageView)
         
-        // Image as small square (60x60) positioned respecting padding
-        let imageTopPadding = padding.top > 0 ? padding.top : 0  // Use padding or 0 for edge alignment
+        // Image as small square (60x60) positioned with paddingBody offsets
+        // Top constraint positions image, bottom constraint ensures minimum container height
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: imageTopPadding),
-            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor, constant: padding.left),
+            imageView.topAnchor.constraint(equalTo: imageContainer.topAnchor, constant: topPadding),
+            imageView.leadingAnchor.constraint(equalTo: imageContainer.leadingAnchor),
             imageView.widthAnchor.constraint(equalToConstant: 60),
-            imageView.heightAnchor.constraint(equalToConstant: 60)
+            imageView.heightAnchor.constraint(equalToConstant: 60),
+            imageView.bottomAnchor.constraint(lessThanOrEqualTo: imageContainer.bottomAnchor, constant: -bottomPadding)
         ])
         
         return imageContainer
     }
     
     /// Create text section (middle - 40% width, title 50% + description 50%)
-    private static func createTextSection(for message: InAppMessage) -> UIView {
+    /// - Parameter hasActions: If false, text section is at right edge and needs paddingBody.right
+    /// - Parameter layoutPaddingRight: Right padding from layout.padding (already applied to mainStack)
+    private static func createTextSection(for message: InAppMessage, hasActions: Bool, layoutPaddingRight: CGFloat) -> UIView {
         let textView = UIView()
         
         let textStack = UIStackView()
@@ -168,10 +177,24 @@ internal class Template3HorizontalView {
         textView.addSubview(textStack)
         
         // Apply paddingBody to the text container (title + description content)
-        var paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
         
-        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
-        paddingBody.right += closeButtonReservedSpace
+        // Right padding logic:
+        // - If hasActions: no right padding (spacing controlled by spaceBetweenContentAndActions)
+        // - If no actions: apply paddingBody.right + closeIcon padding (text is at right edge)
+        var rightPadding: CGFloat = 0
+        if !hasActions {
+            rightPadding = paddingBody.right
+            // Add closeIcon padding only if existing padding is not enough
+            if message.style.closeIcon {
+                let closeIconSize = CGFloat(message.style.closeIconWidth)
+                let neededPadding = closeIconSize + 4
+                let existingPadding = layoutPaddingRight + paddingBody.right
+                if existingPadding < neededPadding {
+                    rightPadding += (neededPadding - existingPadding)
+                }
+            }
+        }
         
         // Set proper priorities to ensure text content is never cut off
         textStack.setContentCompressionResistancePriority(.required, for: .vertical)
@@ -180,7 +203,7 @@ internal class Template3HorizontalView {
         NSLayoutConstraint.activate([
             textStack.topAnchor.constraint(equalTo: textView.topAnchor, constant: paddingBody.top),
             textStack.leadingAnchor.constraint(equalTo: textView.leadingAnchor, constant: paddingBody.left),
-            textStack.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -paddingBody.right),
+            textStack.trailingAnchor.constraint(equalTo: textView.trailingAnchor, constant: -rightPadding),
             textStack.bottomAnchor.constraint(equalTo: textView.bottomAnchor, constant: -paddingBody.bottom)
         ])
         
@@ -188,7 +211,8 @@ internal class Template3HorizontalView {
     }
     
     /// Create actions section (right side - 45% width, buttons stacked vertically and centered)
-    private static func createActionsSection(for message: InAppMessage) -> UIView {
+    /// - Parameter layoutPaddingRight: Right padding from layout.padding (already applied to mainStack)
+    private static func createActionsSection(for message: InAppMessage, layoutPaddingRight: CGFloat) -> UIView {
         let actionsView = UIView()
         
         let actionsStack = UIStackView()
@@ -220,7 +244,18 @@ internal class Template3HorizontalView {
         actionsView.addSubview(actionsStack)
         
         // Apply paddingBody to the actions container
-        let paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        var paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
+        
+        // Add dynamic right padding based on close icon size to prevent overlap
+        // Account for layout.padding.right which is already applied to mainStack
+        if message.style.closeIcon {
+            let closeIconSize = CGFloat(message.style.closeIconWidth)
+            let neededPadding = closeIconSize + 4
+            let existingPadding = layoutPaddingRight + paddingBody.right
+            if existingPadding < neededPadding {
+                paddingBody.right += (neededPadding - existingPadding)
+            }
+        }
         
         NSLayoutConstraint.activate([
             actionsStack.topAnchor.constraint(equalTo: actionsView.topAnchor, constant: paddingBody.top),

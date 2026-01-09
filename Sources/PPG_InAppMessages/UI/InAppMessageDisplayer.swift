@@ -325,15 +325,18 @@ internal class InAppMessageDisplayer {
     
     // Layout & Constraints
     
-    /// Get the appropriate container view to avoid SwiftUI warnings
-    /// - Returns: UIWindow if available and using SwiftUI, otherwise viewController.view
+    /// Get the appropriate container view to avoid SwiftUI/Flutter warnings
+    /// - Returns: UIWindow if available and using SwiftUI/Flutter, otherwise viewController.view
     private func getContainerView(for viewController: UIViewController) -> UIView {
-        // Check if we're dealing with UIHostingController (SwiftUI)
-        let isHostingController = String(describing: type(of: viewController)).contains("HostingController")
+        let viewControllerType = String(describing: type(of: viewController))
         
-        if isHostingController, let window = viewController.view.window {
-            // For SwiftUI, add to window to avoid hierarchy warnings
-            InAppLogger.shared.debug("Using window container for SwiftUI compatibility")
+        // Check if we're dealing with UIHostingController (SwiftUI) or FlutterViewController
+        let isHostingController = viewControllerType.contains("HostingController")
+        let isFlutterController = viewControllerType.contains("Flutter")
+        
+        if (isHostingController || isFlutterController), let window = viewController.view.window {
+            // For SwiftUI and Flutter, add to window to properly block touch events
+            InAppLogger.shared.debug("Using window container for \(isFlutterController ? "Flutter" : "SwiftUI") compatibility")
             return window
         }
         
@@ -457,28 +460,26 @@ internal class InAppMessageDisplayer {
     }
     
     /// Handle subscribe action using bridge pattern
+    /// Always attempts re-registration to handle expired APNS tokens
     private func handleSubscribeAction() {
         guard let viewController = currentViewController else { return }
         
         // Create status provider to check current subscription status
         let statusProvider = PushNotificationStatusProvider()
         
-        // Check current subscription status
-        let isSubscribed = statusProvider.isSubscribed()
+        // Check if notifications are blocked at system level
         let isBlocked = statusProvider.isNotificationsBlocked()
         
-        if isSubscribed && !isBlocked {
-            // User is already fully subscribed
-            showToast(message: "You are already subscribed to push notifications!")
-            dismissMessageSilently()
-            return
-        } else if isBlocked {
-            // Notifications are blocked at system level
+        if isBlocked {
+            // Notifications are blocked at system level - can't re-register
             showToast(message: "Please enable notifications in Settings first.")
             dismissMessageSilently()
             return
         }
         
+        // Always attempt re-registration via bridge
+        // This ensures fresh APNS token is obtained even if user was previously subscribed
+        // (handles case where APNS token expired but local state still shows subscribed)
         Task { [weak self] in
             guard let self = self else { return }
             let success = await pushNotificationSubscriber.requestSubscription(viewController: viewController)

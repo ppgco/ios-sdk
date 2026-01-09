@@ -129,9 +129,11 @@ internal class Template2DesktopView {
         // Apply paddingBody to the content container (title + description + actions)
         var paddingBody = UIStyleParser.parsePadding(message.layout.paddingBody)
         
-        // Add extra right padding to prevent title/description from overlapping close button
-        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
-        paddingBody.right += closeButtonReservedSpace
+        // Add dynamic right padding based on close icon size to prevent text overlap
+        if message.style.closeIcon {
+            let closeIconSize = CGFloat(message.style.closeIconWidth)
+            paddingBody.right = max(paddingBody.right, closeIconSize + 4)
+        }
         
         NSLayoutConstraint.activate([
             contentStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: paddingBody.top),

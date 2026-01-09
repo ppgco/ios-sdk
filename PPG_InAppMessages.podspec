@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'PPG_InAppMessages'
-  s.version          = '4.1.2'
+  s.version          = '4.1.3'
   s.summary          = 'PushPushGo In-App Messages SDK for iOS.'
 
   # A more detailed description of the pod.
@@ -21,6 +21,11 @@ Pod::Spec.new do |s|
   s.swift_version = '5.3'
 
   s.source_files = 'Sources/PPG_InAppMessages/**/*.{h,m,swift}'
+
+  # Bundle fonts as resources
+  s.resource_bundles = {
+    'PPG_InAppMessages' => ['Sources/PPG_InAppMessages/Resources/**/*']
+  }
 
   # Framework dependencies
   s.frameworks = 'UIKit', 'WebKit', 'Foundation'

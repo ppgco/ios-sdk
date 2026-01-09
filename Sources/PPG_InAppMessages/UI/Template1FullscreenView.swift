@@ -162,12 +162,9 @@ internal class Template1FullscreenView {
         
         sectionView.addSubview(contentStack)
         
-        let closeButtonReservedSpace: CGFloat = message.style.closeIcon ? 18 : 0
-        
         if shouldCenterContent {
             // When padding is zero, stretch full width and center vertically
-            var paddingValues = UIStyleParser.parsePadding(message.layout.padding)
-            paddingValues.right += closeButtonReservedSpace
+            let paddingValues = UIStyleParser.parsePadding(message.layout.padding)
             
             NSLayoutConstraint.activate([
                 contentStack.centerXAnchor.constraint(equalTo: sectionView.centerXAnchor),
@@ -177,14 +174,11 @@ internal class Template1FullscreenView {
             ])
         } else {
             // When paddingBody has values, apply all four sides padding (no centering)
-            var adjustedPaddingBody = paddingBody
-            adjustedPaddingBody.right += closeButtonReservedSpace
-            
             NSLayoutConstraint.activate([
-                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: adjustedPaddingBody.top),
-                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: adjustedPaddingBody.left),
-                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -adjustedPaddingBody.right),
-                contentStack.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor, constant: -adjustedPaddingBody.bottom)
+                contentStack.topAnchor.constraint(equalTo: sectionView.topAnchor, constant: paddingBody.top),
+                contentStack.leadingAnchor.constraint(equalTo: sectionView.leadingAnchor, constant: paddingBody.left),
+                contentStack.trailingAnchor.constraint(equalTo: sectionView.trailingAnchor, constant: -paddingBody.right),
+                contentStack.bottomAnchor.constraint(equalTo: sectionView.bottomAnchor, constant: -paddingBody.bottom)
             ])
         }
         

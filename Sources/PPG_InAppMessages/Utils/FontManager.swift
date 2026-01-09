@@ -344,7 +344,23 @@ internal class FontManager {
         #if SWIFT_PACKAGE
         return Bundle.module
         #else
-        return Bundle(for: FontManager.self)
+        // For CocoaPods: look for resource bundle created by resource_bundles in podspec
+        let containerBundle = Bundle(for: FontManager.self)
+        
+        // Try to find the resource bundle (PPG_InAppMessages.bundle)
+        if let resourceBundleURL = containerBundle.url(forResource: "PPG_InAppMessages", withExtension: "bundle"),
+           let resourceBundle = Bundle(url: resourceBundleURL) {
+            return resourceBundle
+        }
+        
+        // Fallback: try to find in main bundle (for Flutter/React Native integrations)
+        if let mainResourceBundleURL = Bundle.main.url(forResource: "PPG_InAppMessages", withExtension: "bundle"),
+           let mainResourceBundle = Bundle(url: mainResourceBundleURL) {
+            return mainResourceBundle
+        }
+        
+        // Last resort: use container bundle directly
+        return containerBundle
         #endif
     }
     
