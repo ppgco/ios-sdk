@@ -53,7 +53,7 @@ Choose one of options:
 #### Cocoapods
 In your **Podfile** add to the application target:
 ```bash
-    pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.3'
+    pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.2.0'
 ```
 Then run
 
@@ -277,7 +277,7 @@ If you are using Cocoapods you need to add NSE to Podfile. Next to your applicat
 target 'PPGNotificationServiceExtension' do
   use_frameworks!
   use_modular_headers!
-  pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.3'
+  pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.2.0'
 end
 ```
 **Note:** While compiling app with Service Extension you might face a problem with UIApplication.shared
@@ -318,6 +318,23 @@ beacon.addTag("new_tag", "new_tag_label")
 beacon.addTagToDelete(BeaconTag(tag: "my_old_tag", label: "my_old_tag_label"))
 
 beacon.send() { result in }
+```
+
+### Dynamic Groups (Segments)
+
+Assign or unassign subscribers to dynamic groups for targeted push notifications:
+
+```swift
+let beacon = Beacon()
+beacon.customId = "user-xyz"
+
+// Assign subscriber to a group
+beacon.assignToGroup("premium-users")  // groupId
+
+// Unassign subscriber from a group
+beacon.unassignFromGroup("trial-users")  // groupId
+
+beacon.send { result in }
 ```
 
 ### Unsubscribe user

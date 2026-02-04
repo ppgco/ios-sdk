@@ -263,6 +263,23 @@ beacon.addTagToDelete(BeaconTag(tag: "my_old_tag", label: "my_old_tag_label"))
 beacon.send() { result in }
 ```
 
+### Dynamic Groups (Segments)
+
+Assign or unassign subscribers to dynamic groups for targeted push notifications:
+
+```swift
+let beacon = Beacon()
+beacon.customId = "user-xyz"
+
+// Assign subscriber to a group
+beacon.assignToGroup("premium-users")  // groupId
+
+// Unassign subscriber from a group
+beacon.unassignFromGroup("trial-users")  // groupId
+
+beacon.send { result in }
+```
+
 ### Unsubscribe user
 `PPG.unsubscribeUser { result in ... }`
 

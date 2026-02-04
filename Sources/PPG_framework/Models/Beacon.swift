@@ -14,12 +14,16 @@ public class Beacon {
     public var tags: [BeaconTag]
     public var tagsToDelete: [BeaconTag]
     public var customId: String
+    public var assignToGroup: String?
+    public var unassignFromGroup: String?
     
     public init() {
         selectors = []
         tags = []
         tagsToDelete = []
         customId = ""
+        assignToGroup = nil
+        unassignFromGroup = nil
     }
     
     public func appendTag(_ tag: String, _ label: String, _ ttl: Int64 = 0) {
@@ -85,6 +89,18 @@ public class Beacon {
     
     public func addSelectors(_ selectors: [BeaconSelector]) {
         self.selectors.append(contentsOf: selectors)
+    }
+    
+    @discardableResult
+    public func assignToGroup(_ groupId: String) -> Beacon {
+        self.assignToGroup = groupId
+        return self
+    }
+    
+    @discardableResult
+    public func unassignFromGroup(_ groupId: String) -> Beacon {
+        self.unassignFromGroup = groupId
+        return self
     }
     
     public func send(handler:@escaping (_ result: ActionResult) -> Void) {

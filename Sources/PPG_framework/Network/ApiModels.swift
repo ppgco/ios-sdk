@@ -41,12 +41,16 @@ struct BeaconBody: Codable {
     var tags: [BeaconTag] = []
     var tagsToDelete: [BeaconTag] = []
     var customId: String = ""
+    var assignToGroup: String?
+    var unassignFromGroup: String?
     
     init(beacon: Beacon) {
         self.selectors = beacon.selectors
         self.tags = beacon.tags
         self.tagsToDelete = beacon.tagsToDelete
         self.customId = beacon.customId
+        self.assignToGroup = beacon.assignToGroup
+        self.unassignFromGroup = beacon.unassignFromGroup
     }
     
     private struct CodingKeys: CodingKey {
@@ -59,6 +63,8 @@ struct BeaconBody: Codable {
         static let tags = CodingKeys.make(key: "tags")
         static let tagsToDelete = CodingKeys.make(key: "tagsToDelete")
         static let customId = CodingKeys.make(key: "customId")
+        static let assignToGroup = CodingKeys.make(key: "assignToGroup")
+        static let unassignFromGroup = CodingKeys.make(key: "unassignFromGroup")
         
         static func make(key: String) -> CodingKeys {
             return CodingKeys(stringValue: key)!
@@ -88,6 +94,8 @@ struct BeaconBody: Codable {
         try container.encode(self.tags, forKey: .tags)
         try container.encode(self.tagsToDelete, forKey: .tagsToDelete)
         try container.encode(self.customId, forKey: .customId)
+        try container.encodeIfPresent(self.assignToGroup, forKey: .assignToGroup)
+        try container.encodeIfPresent(self.unassignFromGroup, forKey: .unassignFromGroup)
     }
     
     init(from coder: Decoder) throws {
