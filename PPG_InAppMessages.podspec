@@ -22,9 +22,9 @@ Pod::Spec.new do |s|
 
   s.source_files = 'Sources/PPG_InAppMessages/**/*.{h,m,swift}'
 
-  # Bundle fonts as resources
+  # Bundle fonts as resources (only font files, exclude directories to avoid duplicates)
   s.resource_bundles = {
-    'PPG_InAppMessages' => ['Sources/PPG_InAppMessages/Resources/**/*']
+    'PPG_InAppMessages' => ['Sources/PPG_InAppMessages/Resources/**/*.ttf']
   }
 
   # Framework dependencies
