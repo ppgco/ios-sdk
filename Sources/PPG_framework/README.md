@@ -203,34 +203,57 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 10. In your NotificationService extension, in *didReceive* function set your app group ID.
 
 ```swift
-override func didReceive(_ request: UNNotificationRequest, withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
+private var contentHandler: ((UNNotificationContent) -> Void)?
+private var bestAttemptContent: UNMutableNotificationContent?
+
+override func didReceive(
+    _ request: UNNotificationRequest,
+    withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
+) {
+    guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else {
+        contentHandler(request.content)
+        return
+    }
+
     self.contentHandler = contentHandler
-    self.bestAttemptContent = (request.content.mutableCopy() as? UNMutableNotificationContent)
+    self.bestAttemptContent = content
 
-    guard let content = bestAttemptContent else { return }
-
-    // Wait for delivery event result & image fetch before returning from extension
-    let group = DispatchGroup()
-    group.enter()
-    group.enter()
-
-    // Dynamically set app group ID for your app
+    // Dynamically set the App Group ID configured for the app and extension.
     SharedData.shared.appGroupId = "YOUR APP GROUP ID"
 
+    let group = DispatchGroup()
+
+    group.enter()
     PPG.notificationDelivered(notificationRequest: request) { _ in
         group.leave()
     }
 
-    DispatchQueue.global().async { [weak self] in
-        self?.bestAttemptContent = PPG.modifyNotification(content)
+    group.enter()
+    PPG.modifyNotification(content) {
         group.leave()
     }
 
-    group.notify(queue: .main) {
-        contentHandler(self.bestAttemptContent ?? content)
+    group.notify(queue: .main) { [weak self] in
+        guard let self = self,
+              let contentHandler = self.contentHandler,
+              let bestAttemptContent = self.bestAttemptContent else {
+            return
+        }
+
+        self.contentHandler = nil
+        contentHandler(bestAttemptContent)
     }
 }
 
+override func serviceExtensionTimeWillExpire() {
+    guard let contentHandler = contentHandler,
+          let bestAttemptContent = bestAttemptContent else {
+        return
+    }
+
+    self.contentHandler = nil
+    contentHandler(bestAttemptContent)
+}
 ```
 
 # Usage guide

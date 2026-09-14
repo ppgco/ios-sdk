@@ -10,25 +10,36 @@ import Foundation
 import UserNotifications
 
 extension UNNotificationAttachment {
-
     convenience init?(url: String) throws {
-        let fileManager = FileManager.default
-        let temporaryFolderName = ProcessInfo.processInfo.globallyUniqueString
-        let temporaryFolderURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(temporaryFolderName, isDirectory: true)
-
-        try fileManager.createDirectory(at: temporaryFolderURL, withIntermediateDirectories: true, attributes: nil)
-        
-        guard let dotIndex = url.lastIndex(where: { $0 == "." })
-            else { return nil }
-        let imageExtension = url[dotIndex..<url.endIndex]
-        let imageFileIdentifier = UUID().uuidString + imageExtension
-        let fileURL = temporaryFolderURL.appendingPathComponent(imageFileIdentifier)
-        
-        guard let imageData = try? Data(contentsOf: URL(string: url)!) else {
+        guard let imageUrl = URL(string: url) else {
             return nil
         }
-        
-        try imageData.write(to: fileURL)
-        try self.init(identifier: imageFileIdentifier, url: fileURL, options: [:])
+
+        let pathExtension = imageUrl.pathExtension
+        guard !pathExtension.isEmpty else {
+            return nil
+        }
+
+        guard let imageData = try? Data(contentsOf: imageUrl),
+              !imageData.isEmpty else {
+            return nil
+        }
+
+        let fileManager = FileManager.default
+        let fileUrl = fileManager.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(pathExtension)
+
+        do {
+            try imageData.write(to: fileUrl)
+            try self.init(
+                identifier: fileUrl.lastPathComponent,
+                url: fileUrl,
+                options: nil
+            )
+        } catch {
+            try? fileManager.removeItem(at: fileUrl)
+            throw error
+        }
     }
 }

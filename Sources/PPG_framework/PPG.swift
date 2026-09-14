@@ -248,6 +248,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         return (nil, false)
     }
     
+    @available(*, deprecated, message: "Use modifyNotification(_:completion:) instead.")
     public static func modifyNotification(
         _ notification: UNMutableNotificationContent
     ) -> UNMutableNotificationContent {
@@ -256,21 +257,67 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
            let attachement = try? UNNotificationAttachment(url: imageUrl) {
             notification.attachments = [attachement]
         }
-        
+
         let group = DispatchGroup()
+
         group.enter()
-        
+        prepareNotificationCategories(for: notification) { categoryId in
+            notification.categoryIdentifier = categoryId
+            group.leave()
+        }
+
+        group.wait()
+
+        return notification
+    }
+
+    public static func modifyNotification(
+        _ notification: UNMutableNotificationContent,
+        completion: @escaping () -> Void
+    ) {
+        let group = DispatchGroup()
+
+        group.enter()
+        prepareNotificationCategories(for: notification) { categoryId in
+            DispatchQueue.main.async {
+                notification.categoryIdentifier = categoryId
+                group.leave()
+            }
+        }
+
+        group.enter()
+        downloadNotificationImage(from: notification.userInfo["image"] as? String) { attachment in
+            DispatchQueue.main.async {
+                if let attachment = attachment {
+                    notification.attachments = [attachment]
+                }
+                group.leave()
+            }
+        }
+
+        group.notify(queue: .main) {
+            completion()
+        }
+    }
+
+    private static func prepareNotificationCategories(
+        for notification: UNMutableNotificationContent,
+        completion: @escaping (String) -> Void
+    ) {
+        let actions = notification.userInfo["actions"] as? [[String: Any]]
+        let categoryId = notification.categoryIdentifier
+
         UNUserNotificationCenter.current().getNotificationCategories { existingCategories in
             var updatedCategories = existingCategories
-            
+            var categoryId = categoryId
+
             // Process actions from payload
-            if let actions = notification.userInfo["actions"] as? [[String: Any]], !actions.isEmpty {
-                
+            if let actions = actions, !actions.isEmpty {
                 let dynamicActions = NotificationActionBuilder.createUniqueActions(from: actions)
                 
                 // Use existing category ID or generate a new one
-                let categoryId = notification.categoryIdentifier.isEmpty ? 
-                               "\(CategoryManager.dynamicCategoryPrefix)\(UUID().uuidString)" : notification.categoryIdentifier
+                categoryId = categoryId.isEmpty ?
+                               "\(CategoryManager.dynamicCategoryPrefix)\(UUID().uuidString)" : categoryId
                 
                 // Create category
                 let category = UNNotificationCategory(
@@ -279,22 +326,21 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                     intentIdentifiers: [],
                     options: []
                 )
-                
+
                 // Keep all existing categories except the one we're updating
                 updatedCategories = updatedCategories.filter { $0.identifier != categoryId }
                 updatedCategories.insert(category)
-                
-                notification.categoryIdentifier = categoryId
+
                 CategoryManager.saveCategory(id: categoryId, actions: dynamicActions)
                 print("PPG SDK - Added category: \(categoryId)")
             } else {
-                notification.categoryIdentifier = CategoryManager.defaultCategoryId
+                categoryId = CategoryManager.defaultCategoryId
                 print("PPG SDK - Using default category")
             }
             
             // Get valid stored categories
             let storedCategoryIds = Set(CategoryManager.loadStoredCategories().map { $0.id })
-            
+
             updatedCategories = updatedCategories.filter { category in
                 guard category.identifier.hasPrefix(CategoryManager.dynamicCategoryPrefix) else {
                     return true
@@ -302,16 +348,70 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
                 return storedCategoryIds.contains(category.identifier)
             }
-            
+
             // Update notification center
             UNUserNotificationCenter.current().setNotificationCategories(updatedCategories)
             print("PPG SDK - Categories after update: \(updatedCategories.map { $0.identifier })")
-            
-            group.leave()
+
+            completion(categoryId)
         }
+    }
+
+    private static func downloadNotificationImage(
+        from imageUrlString: String?,
+        completion: @escaping (UNNotificationAttachment?) -> Void
+    ) {
+        guard let imageUrlString = imageUrlString,
+              let imageUrl = URL(string: imageUrlString) else {
+            completion(nil)
+            return
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.timeoutIntervalForRequest = 10
+        configuration.timeoutIntervalForResource = 10
         
-        group.wait()
-        return notification
+        let session = URLSession(configuration: configuration)
+
+        session.downloadTask(with: imageUrl) { temporaryUrl, response, error in
+            defer { session.finishTasksAndInvalidate() }
+
+            guard error == nil,
+                  let temporaryUrl = temporaryUrl else {
+                completion(nil)
+                return
+            }
+
+            guard let response = response as? HTTPURLResponse,
+                  (200...299).contains(response.statusCode) else {
+                completion(nil)
+                return
+            }
+
+            guard let pathExtension = response.url?.pathExtension,
+                  !pathExtension.isEmpty else {
+                completion(nil)
+                return
+            }
+
+            let fileManager = FileManager.default
+            let attachmentUrl = fileManager.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension(pathExtension)
+
+            do {
+                try fileManager.moveItem(at: temporaryUrl, to: attachmentUrl)
+                let attachment = try UNNotificationAttachment(
+                    identifier: attachmentUrl.lastPathComponent,
+                    url: attachmentUrl,
+                    options: nil
+                )
+                completion(attachment)
+            } catch {
+                try? fileManager.removeItem(at: attachmentUrl)
+                completion(nil)
+            }
+        }.resume()
     }
 
     public static func sendEventsDataToApi() {
