@@ -24,11 +24,9 @@ open class PPGAppDelegate: NSObject, UIApplicationDelegate {
             }
         }
     }
-    
+
     open func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        PPG.registerNotificationDeliveredFromUserInfo(userInfo: userInfo) { _ in
-            completionHandler(.newData)
-        }
+        completionHandler(.noData)
     }
 }
 
@@ -57,9 +55,8 @@ public extension UIApplicationDelegate {
         PPG.sendDeviceToken(deviceToken, handler: completion)
     }
     
+    @available(iOS, deprecated, message: "This method no longer needs to be called.")
     func PPGdidReceiveRemoteNotification(_ userInfo: [AnyHashable : Any], completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
-        PPG.registerNotificationDeliveredFromUserInfo(userInfo: userInfo) { _ in
-            completionHandler(.newData)
-        }
+        completionHandler(.noData)
     }
 }

@@ -108,7 +108,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         let key = tokenParts.joined()
         let oldKey = SharedData.shared.deviceToken
 
-        print("Device token \(key)")
+        print("Device token \(key.prefix(8))…")
 
         if oldKey == key {
             // Token already registered
@@ -172,29 +172,22 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         notificationRequest: UNNotificationRequest,
         handler: @escaping (_ result: ActionResult) -> Void
     ) {
-        SharedData.shared.eventManager.notificationDelivered(
-            notificationRequest: notificationRequest, handler: handler)
+        EventManager.shared.notificationDelivered(notificationRequest: notificationRequest, handler: handler)
     }
 
     public static func registerNotificationDeliveredFromUserInfo(
         userInfo: [AnyHashable: Any],
         handler: @escaping (_ result: ActionResult) -> Void
     ) {
-        SharedData.shared.eventManager
-            .registerNotificationDeliveredFromUserInfo(
-                userInfo: userInfo, handler: handler)
-
+        EventManager.shared.notificationDelivered(userInfo: userInfo, handler: handler)
     }
 
     public static func notificationClicked(response: UNNotificationResponse) {
-        SharedData.shared.eventManager.notificationClicked(response: response)
+        EventManager.shared.notificationClicked(response: response) { _ in }
     }
 
-    public static func notificationButtonClicked(
-        response: UNNotificationResponse, button: Int
-    ) {
-        SharedData.shared.eventManager.notificationButtonClicked(
-            response: response, button: button)
+    public static func notificationButtonClicked(response: UNNotificationResponse, button: Int) {
+        EventManager.shared.notificationClicked(response: response, button: button) { _ in }
     }
 
     // Get supported URL schemes from Info.plist or fall back to defaults
@@ -318,23 +311,18 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         return notification
     }
 
-
-
     public static func sendEventsDataToApi() {
-        SharedData.shared.eventManager.sync { result in
-            print(result)
-        }
+        EventManager.shared.sync()
     }
 
     public static func sendBeacon(
         _ beacon: Beacon, handler: @escaping (_ result: ActionResult) -> Void
     ) {
-
         ApiService.shared.sendBeacon(beacon: beacon, handler: handler)
     }
     
     public static func getEvents() -> [EventDTO] {
-        return SharedData.shared.eventManager.getEvents().map {$0.toDTO()}
+        return EventManager.shared.getEvents().map {$0.toDTO()}
     }
     
     //UNUserNotificationCenterDelegate

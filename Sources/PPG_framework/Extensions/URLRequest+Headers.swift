@@ -10,8 +10,8 @@ import Foundation
 
 extension URLRequest {
 
-    mutating func addStandardHeaders() {
+    mutating func addStandardHeaders(apiToken: String = SharedData.shared.apiToken) {
         self.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        self.setValue(SharedData.shared.apiToken, forHTTPHeaderField: "X-Token")
+        self.setValue(apiToken, forHTTPHeaderField: "X-Token")
     }
 }

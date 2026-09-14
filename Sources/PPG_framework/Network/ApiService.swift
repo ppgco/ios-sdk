@@ -69,35 +69,47 @@ class ApiService {
         }.resume()
     }
 
-    func sendEvent(event: Event, handler: @escaping (_ result: ActionResult) -> Void) {
-        let projectId = SharedData.shared.projectId
-        let subscriberId = SharedData.shared.subscriberId
-        
-        if subscriberId == "" {
-            handler(.error("Subscriber ID is not available"))
-            return
-        }
-
+    func sendEvent(event: Event, handler: @escaping (_ result: EventSendResult) -> Void) {
         let bodyData = EventBody(
             type: event.eventType.rawValue,
             payload: EventBodyPayload(timestamp: event.timestamp, button: event.button,
-                                      campaign: event.campaign, subscriber: subscriberId))
+                                      campaign: event.campaign, subscriber: event.subscriberId))
 
         guard let encoded = try? JSONEncoder().encode(bodyData) else {
-            handler(.error("Failed to encode token"))
+            handler(.permanentFailure("Failed to encode event"))
             return
         }
 
-        let url = URL(string: "\(baseUrl)/v1/ios/\(projectId)/event/")!
+        guard let url = URL(string: "\(baseUrl)/v1/ios/\(event.projectId)/event/") else {
+            handler(.permanentFailure("Failed to construct event URL"))
+            return
+        }
+
         var request = URLRequest(url: url)
-        request.addStandardHeaders()
+        request.addStandardHeaders(apiToken: event.apiToken)
         request.httpMethod = "POST"
         request.httpBody = encoded
+        request.timeoutInterval = 10
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            // handle the result here.
-            if error != nil {
-                handler(.error(error?.localizedDescription ?? "Unknown error"))
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                handler(.platformFailure(error.localizedDescription))
+                return
+            }
+
+            guard let response = response as? HTTPURLResponse else {
+                handler(.platformFailure("Invalid response from server"))
+                return
+            }
+
+            guard (200...299).contains(response.statusCode) else {
+                let message = "Server returned HTTP \(response.statusCode)"
+                if response.statusCode == 408 || response.statusCode == 429
+                    || (500...599).contains(response.statusCode) {
+                    handler(.retryableFailure(message))
+                } else {
+                    handler(.permanentFailure(message))
+                }
                 return
             }
 
@@ -117,7 +129,7 @@ class ApiService {
         let requestBody = BeaconBody(beacon: beacon)
 
         guard let encoded = try? JSONEncoder().encode(requestBody) else {
-            print("Failed to encode token")
+            handler(.error("Failed to encode beacon"))
             return
         }
 

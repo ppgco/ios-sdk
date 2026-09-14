@@ -24,25 +24,32 @@ public struct EventDTO {
     public var sentAt: Date?
 }
 
-// Protocol defining the method for sending events.
-protocol EventSender {
-    func send(event: Event, handler: @escaping (_ result: ActionResult) -> Void)
-}
-
 class Event: Codable, CustomStringConvertible {
 
-    public var eventType: EventType
-    public var timestamp: String  // ISO8601 formatted timestamp
-    public var button: Int?
-    public var campaign: String
-    public var sentAt: Date?
+    let id: UUID
+    let eventType: EventType
+    let timestamp: String  // ISO8601 formatted timestamp
+    let button: Int?
+    let campaign: String
+    let projectId: String
+    let apiToken: String
+    let subscriberId: String
+    let sentAt: Date?
+    var failureCount: Int
+    var lastFailureAt: Date?
 
     enum CodingKeys: String, CodingKey {
+        case id
         case eventType
         case timestamp
         case button
         case campaign
+        case projectId
+        case apiToken
+        case subscriberId
         case sentAt
+        case failureCount
+        case lastFailureAt
     }
 
     // Custom ISO8601DateFormatter with options to handle fractional seconds and Zulu timezone.
@@ -61,114 +68,70 @@ class Event: Codable, CustomStringConvertible {
         }()
 
     init(
-        eventType: EventType = .delivered, button: Int? = nil,
-        campaign: String = "", sender: EventSender? = DefaultEventSender()
+        id: UUID = UUID(),
+        eventType: EventType = .delivered,
+        button: Int? = nil,
+        campaign: String,
+        projectId: String,
+        apiToken: String,
+        subscriberId: String,
+        timestamp: String = Event.iso8601DateFormatter.string(from: Date()),
+        sentAt: Date? = nil,
+        failureCount: Int = 0,
+        lastFailureAt: Date? = nil
     ) {
+        self.id = id
         self.eventType = eventType
-        self.timestamp = Event.iso8601DateFormatter.string(from: Date())
+        self.timestamp = timestamp
         self.button = button
         self.campaign = campaign
-        self.sentAt = nil
+        self.projectId = projectId
+        self.apiToken = apiToken
+        self.subscriberId = subscriberId
+        self.sentAt = sentAt
+        self.failureCount = failureCount
+        self.lastFailureAt = lastFailureAt
     }
 
-    public required init(from decoder: Decoder) throws {
+    required init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         eventType = try container.decode(EventType.self, forKey: .eventType)
         timestamp = try container.decode(String.self, forKey: .timestamp)
         button = try container.decodeIfPresent(Int.self, forKey: .button)
         campaign = try container.decode(String.self, forKey: .campaign)
+        projectId = try container.decodeIfPresent(String.self, forKey: .projectId) ?? ""
+        apiToken = try container.decodeIfPresent(String.self, forKey: .apiToken) ?? ""
+        subscriberId = try container.decodeIfPresent(String.self, forKey: .subscriberId) ?? ""
         sentAt = try container.decodeIfPresent(Date.self, forKey: .sentAt)
+        failureCount = try container.decodeIfPresent(Int.self, forKey: .failureCount) ?? 0
+        lastFailureAt = try container.decodeIfPresent(Date.self, forKey: .lastFailureAt)
     }
 
-    public func encode(to encoder: Encoder) throws {
+    func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
         try container.encode(eventType, forKey: .eventType)
         try container.encode(timestamp, forKey: .timestamp)
         try container.encodeIfPresent(button, forKey: .button)
         try container.encode(campaign, forKey: .campaign)
+        try container.encode(projectId, forKey: .projectId)
+        try container.encode(apiToken, forKey: .apiToken)
+        try container.encode(subscriberId, forKey: .subscriberId)
         try container.encodeIfPresent(sentAt, forKey: .sentAt)
+        try container.encode(failureCount, forKey: .failureCount)
+        try container.encodeIfPresent(lastFailureAt, forKey: .lastFailureAt)
     }
 
-    public var description: String {
+    var description: String {
         let buttonStr = button.map { "\($0)" } ?? "none"
         let sentAtStr = sentAt.map { Event.iso8601DateFormatter.string(from: $0) } ?? "not sent"
         return """
         Event(type: \(eventType.rawValue), timestamp: \(timestamp), button: \(buttonStr), campaign: '\(campaign)', sentAt: \(sentAtStr))
         """
     }
-    
-    public func toDTO() -> EventDTO {
+
+    func toDTO() -> EventDTO {
         return EventDTO(event: self)
-    }
-    
-    func getKey() -> String {
-        return "\(eventType.rawValue)_\(button ?? 0)_\(campaign)"
-    }
-
-    func send(
-        sender: EventSender, handler: @escaping (_ result: ActionResult) -> Void
-    ) {
-        if self.wasSent() {
-            DispatchQueue.main.async {
-                handler(.error("Event was sent before"))
-            }
-            return
-        }
-        sender.send(event: self) { result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success:
-                    self.sentAt = Date()
-                    handler(result)
-                case .error:
-                    handler(result)
-                }
-            }
-        }
-    }
-
-    func wasSent() -> Bool {
-        return sentAt != nil
-    }
-
-    func canDelete() -> Bool {
-        return wasSent() && isExpired()
-    }
-
-    func isExpired() -> Bool {
-        guard let sentAt = self.sentAt else { return false }
-        return Date().timeIntervalSince(sentAt) > 7 * 24 * 60 * 60  // 7 days
-    }
-
-    func debug() {
-        print(getKey(), sentAt as Any, wasSent(), isExpired())
-    }
-
-    static func == (lhs: Event, rhs: Event) -> Bool {
-        return lhs.button == rhs.button && lhs.campaign == rhs.campaign
-            && lhs.eventType == rhs.eventType && lhs.timestamp == rhs.timestamp
-    }
-
-    func softEquals(_ other: Event) -> Bool {
-        return button == other.button && campaign == other.campaign
-            && eventType == other.eventType
-    }
-}
-
-// Default implementation of EventSender using the production API service.
-class DefaultEventSender: EventSender {
-    func send(event: Event, handler: @escaping (_ result: ActionResult) -> Void)
-    {
-        ApiService.shared.sendEvent(event: event, handler: handler)
-    }
-}
-
-class MockEventSender: EventSender {
-    func send(event: Event, handler: @escaping (_ result: ActionResult) -> Void)
-    {
-        // Simulate asynchronous success after a short delay.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
-            handler(.success)
-        }
     }
 }

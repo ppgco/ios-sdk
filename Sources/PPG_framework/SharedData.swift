@@ -12,6 +12,7 @@ import UserNotifications
 public class SharedData {
 
     public static var shared = SharedData()
+
     public var appGroupId: String = ""
     var sharedDefaults: UserDefaults {
         // If appGroupId is empty or invalid, fallback to standard UserDefaults
@@ -61,10 +62,6 @@ public class SharedData {
         set {
             sharedDefaults.set(newValue, forKey: "PPGDeviceToken")
         }
-    }
-
-    var eventManager: EventManager {
-        return EventManager(sharedData: self)
     }
 
     var center: UNUserNotificationCenter!
