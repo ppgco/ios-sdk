@@ -8,8 +8,8 @@
 
 import Foundation
 
-struct PPGApiError: Codable {
-    let messages: [String]
+struct ApiErrorResponse: Decodable {
+    let message: String
 }
 
 struct SubscribeUserResponse: Codable {

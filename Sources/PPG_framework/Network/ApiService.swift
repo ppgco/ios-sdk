@@ -12,6 +12,7 @@ class ApiService {
     static var shared = ApiService()
 
     let baseUrl = "https://api.pushpushgo.com"
+    private static let inactiveSubscriberMessage = "Cannot perform operation on inactive subscriber"
 
     func subscribeUser(token: String, handler: @escaping (_ result: ActionResult) -> Void) {
         guard let encoded = try? JSONEncoder().encode(["token": token]) else {
@@ -29,11 +30,23 @@ class ApiService {
         request.httpBody = encoded
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // handle the result here.
+            if let error = error {
+                handler(.error(error.localizedDescription))
+                return
+            }
+
+            guard let response = response as? HTTPURLResponse else {
+                handler(.error("Invalid response from server"))
+                return
+            }
+
+            guard (200...299).contains(response.statusCode) else {
+                handler(.error("Server returned HTTP \(response.statusCode)"))
+                return
+            }
+
             guard let data = data else {
-                let log = "No data in response: \(error?.localizedDescription ?? "Unknown error")."
-                print(log)
-                handler(.error(log))
+                handler(.error("No data in response"))
                 return
             }
 
@@ -58,14 +71,30 @@ class ApiService {
         request.httpMethod = "DELETE"
 
         URLSession.shared.dataTask(with: request) { data, response, error in
-            // handle the result here.
-            if error != nil {
-                handler(.error(error?.localizedDescription ?? "Unknown error"))
+            if let error = error {
+                handler(.error(error.localizedDescription))
                 return
             }
 
-            handler(.success)
+            guard let response = response as? HTTPURLResponse else {
+                handler(.error("Invalid response from server"))
+                return
+            }
 
+            if (200...299).contains(response.statusCode) || response.statusCode == 404 {
+                handler(.success)
+                return
+            }
+
+            if response.statusCode == 400,
+               let data = data,
+               let apiError = try? JSONDecoder().decode(ApiErrorResponse.self, from: data),
+               apiError.message == Self.inactiveSubscriberMessage {
+                handler(.success)
+                return
+            }
+
+            handler(.error("Server returned HTTP \(response.statusCode)"))
         }.resume()
     }
 
@@ -139,9 +168,19 @@ class ApiService {
         request.httpMethod = "POST"
         request.httpBody = encoded
 
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            if error != nil {
-                handler(.error(error?.localizedDescription ?? "Unknown error"))
+        URLSession.shared.dataTask(with: request) { _, response, error in
+            if let error = error {
+                handler(.error(error.localizedDescription))
+                return
+            }
+
+            guard let response = response as? HTTPURLResponse else {
+                handler(.error("Invalid response from server"))
+                return
+            }
+
+            guard (200...299).contains(response.statusCode) else {
+                handler(.error("Server returned HTTP \(response.statusCode)"))
                 return
             }
 
