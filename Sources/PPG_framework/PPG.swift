@@ -182,12 +182,33 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         EventManager.shared.notificationDelivered(userInfo: userInfo, handler: handler)
     }
 
+    @available(*, deprecated, message: "Use notificationClicked(response:handler:) instead.")
     public static func notificationClicked(response: UNNotificationResponse) {
-        EventManager.shared.notificationClicked(response: response) { _ in }
+        notificationClicked(response: response) { _ in }
     }
 
+    public static func notificationClicked(
+        response: UNNotificationResponse,
+        handler: @escaping (_ result: ActionResult) -> Void
+    ) {
+        EventManager.shared.notificationClicked(response: response, handler: handler)
+    }
+
+    @available(*, deprecated, message: "Use notificationButtonClicked(response:button:handler:) instead.")
     public static func notificationButtonClicked(response: UNNotificationResponse, button: Int) {
-        EventManager.shared.notificationClicked(response: response, button: button) { _ in }
+        notificationButtonClicked(response: response, button: button) { _ in }
+    }
+
+    public static func notificationButtonClicked(
+        response: UNNotificationResponse,
+        button: Int,
+        handler: @escaping (_ result: ActionResult) -> Void
+    ) {
+        EventManager.shared.notificationClicked(
+            response: response,
+            button: button,
+            handler: handler
+        )
     }
 
     // Get supported URL schemes from Info.plist or fall back to defaults
@@ -445,53 +466,55 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let actionIdentifier = response.actionIdentifier
-        
-        // Handle the action
-        if actionIdentifier == UNNotificationDefaultActionIdentifier {
-            // User tapped the notification itself
-            PPG.notificationClicked(response: response)
-        } else if actionIdentifier == "button_1" {
-            PPG.notificationButtonClicked(response: response, button: 1)
-        } else if actionIdentifier == "button_2" {
-            PPG.notificationButtonClicked(response: response, button: 2)
-        } else {
-            // Track as regular notification click for unknown actions
-            PPG.notificationClicked(response: response)
-        }
-        
-        // Handle URL opening if present
-        let (responseUrl, isUniversalLink) = PPG.getUrlFromNotificationResponse(response: response)
-        
-        if let url = responseUrl {
-            // Get UIApplication.shared safely using reflection
-            guard let sharedApplication = UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication else {
-                completionHandler()
-                return
+        let registerClick: (@escaping (ActionResult) -> Void) -> Void = { handler in
+            if actionIdentifier == UNNotificationDefaultActionIdentifier {
+                // User tapped the notification itself
+                PPG.notificationClicked(response: response, handler: handler)
+            } else if actionIdentifier == "button_1" {
+                PPG.notificationButtonClicked(response: response, button: 1, handler: handler)
+            } else if actionIdentifier == "button_2" {
+                PPG.notificationButtonClicked(response: response, button: 2, handler: handler)
+            } else {
+                // Track as regular notification click for unknown actions
+                PPG.notificationClicked(response: response, handler: handler)
             }
-            
-            if isUniversalLink {
-                // Handle as Universal Link using NSUserActivity
-                let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
-                userActivity.webpageURL = url
+        }
+
+        registerClick { _ in
+            // Handle URL opening if present
+            let (responseUrl, isUniversalLink) = PPG.getUrlFromNotificationResponse(response: response)
+
+            if let url = responseUrl {
+                // Get UIApplication.shared safely using reflection
+                guard let sharedApplication = UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication else {
+                    completionHandler()
+                    return
+                }
                 
-                DispatchQueue.main.async {
-                    // Pass to app delegate
-                    if let appDelegate = sharedApplication.delegate,
-                       appDelegate.responds(to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))) {
-                        _ = appDelegate.application?(sharedApplication, continue: userActivity, restorationHandler: { _ in })
-                    } else {
-                        // Fallback if app delegate can't handle it
+                if isUniversalLink {
+                    // Handle as Universal Link using NSUserActivity
+                    let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
+                    userActivity.webpageURL = url
+
+                    DispatchQueue.main.async {
+                        // Pass to app delegate
+                        if let appDelegate = sharedApplication.delegate,
+                           appDelegate.responds(to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))) {
+                            _ = appDelegate.application?(sharedApplication, continue: userActivity, restorationHandler: { _ in })
+                        } else {
+                            // Fallback if app delegate can't handle it
+                            sharedApplication.open(url)
+                        }
+                    }
+                } else {
+                    // Open as regular URL in browser
+                    DispatchQueue.main.async {
                         sharedApplication.open(url)
                     }
                 }
-            } else {
-                // Open as regular URL in browser
-                DispatchQueue.main.async {
-                    sharedApplication.open(url)
-                }
             }
+            completionHandler()
         }
-        completionHandler()
     }
 
 }
