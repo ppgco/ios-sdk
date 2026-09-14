@@ -73,9 +73,9 @@ public class Beacon {
     }
     
     public func addSelector(_ name: String, _ value: Date) {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
-        let formattedDate = formatter.string(from: value) + "Z"
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let formattedDate = formatter.string(from: value)
         let tmpSelector = BeaconSelector(name: name, value: formattedDate)
         self.selectors.append(tmpSelector)
     }
