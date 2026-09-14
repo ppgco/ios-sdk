@@ -270,7 +270,7 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
                 
                 // Use existing category ID or generate a new one
                 let categoryId = notification.categoryIdentifier.isEmpty ? 
-                               "ppg_category_\(UUID().uuidString)" : notification.categoryIdentifier
+                               "\(CategoryManager.dynamicCategoryPrefix)\(UUID().uuidString)" : notification.categoryIdentifier
                 
                 // Create category
                 let category = UNNotificationCategory(
@@ -295,9 +295,12 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             // Get valid stored categories
             let storedCategoryIds = Set(CategoryManager.loadStoredCategories().map { $0.id })
             
-            // Keep existing categories that are still valid
             updatedCategories = updatedCategories.filter { category in
-                category.identifier == CategoryManager.defaultCategoryId || storedCategoryIds.contains(category.identifier)
+                guard category.identifier.hasPrefix(CategoryManager.dynamicCategoryPrefix) else {
+                    return true
+                }
+
+                return storedCategoryIds.contains(category.identifier)
             }
             
             // Update notification center

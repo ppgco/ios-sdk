@@ -83,6 +83,7 @@ public struct StoredCategory: Codable {
 
 public struct CategoryManager {
     public static let defaultCategoryId = "default_notification"
+    static let dynamicCategoryPrefix = "ppg_category_"
     private static let dynamicCategoriesKey = "PPGDynamicCategories"
     
     static func loadStoredCategories() -> [StoredCategory] {
