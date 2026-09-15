@@ -14,6 +14,9 @@ public class SharedData {
     public static var shared = SharedData()
 
     public var appGroupId: String = ""
+    private static let installationIdKey = "PPGInstallationId"
+    private static let legacyInstallationIdKey = "PPGLiveActivities_InstallationID"
+
     var sharedDefaults: UserDefaults {
         // If appGroupId is empty or invalid, fallback to standard UserDefaults
         if appGroupId.isEmpty {
@@ -62,6 +65,25 @@ public class SharedData {
         set {
             sharedDefaults.set(newValue, forKey: "PPGDeviceToken")
         }
+    }
+
+    var installationId: String {
+        if let existing = sharedDefaults.string(forKey: Self.installationIdKey),
+           !existing.isEmpty {
+            return existing
+        }
+
+        if let legacy = UserDefaults.standard.string(forKey: Self.legacyInstallationIdKey),
+           !legacy.isEmpty {
+            sharedDefaults.set(legacy, forKey: Self.installationIdKey)
+            UserDefaults.standard.removeObject(forKey: Self.legacyInstallationIdKey)
+            return legacy
+        }
+
+        let installationId = UUID().uuidString
+        sharedDefaults.set(installationId, forKey: Self.installationIdKey)
+
+        return installationId
     }
 
     var center: UNUserNotificationCenter!

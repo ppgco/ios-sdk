@@ -9,9 +9,6 @@
 //
 
 import Foundation
-#if canImport(UIKit)
-import UIKit
-#endif
 
 /// Lifecycle status emitted by the per-notification subscriber to inform
 /// callers of `LiveActivitiesSDK.subscribe(...)` about state changes.
@@ -104,14 +101,10 @@ internal struct PPGLiveNotificationInstallationMetadata: Codable, Sendable {
     let osVersion: String
     
     static let current: PPGLiveNotificationInstallationMetadata = {
-        #if canImport(UIKit)
-        let os = UIDevice.current.systemVersion
-        #else
-        let os = ProcessInfo.processInfo.operatingSystemVersionString
-        #endif
+        let version = ProcessInfo.processInfo.operatingSystemVersion
         return PPGLiveNotificationInstallationMetadata(
             sdkVersion: PPGLiveActivitiesVersion.current,
-            osVersion: os
+            osVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)"
         )
     }()
 }
@@ -144,5 +137,5 @@ internal struct PPGUpdateLiveNotificationEndpointRequest: Codable, Sendable {
 /// Update on every release tag.
 @available(iOS 17.2, *)
 internal enum PPGLiveActivitiesVersion {
-    static let current = "4.4.1"
+    static let current = "4.5.0"
 }

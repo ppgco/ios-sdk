@@ -15,13 +15,15 @@ class ApiService {
     private static let inactiveSubscriberMessage = "Cannot perform operation on inactive subscriber"
 
     func subscribeUser(token: String, handler: @escaping (_ result: ActionResult) -> Void) {
-        guard let encoded = try? JSONEncoder().encode(["token": token]) else {
+        let projectId = SharedData.shared.projectId
+        let body = SubscribeUserRequest.make(token: token)
+
+        guard let encoded = try? JSONEncoder().encode(body) else {
             let log = "Failed to encode token"
             print(log)
             handler(.error(log))
             return
         }
-        let projectId = SharedData.shared.projectId
 
         let url = URL(string: "\(baseUrl)/v1/ios/\(projectId)/subscriber")!
         var request = URLRequest(url: url)
@@ -186,5 +188,24 @@ class ApiService {
 
             handler(.success)
         }.resume()
+    }
+}
+
+private struct SubscribeUserRequest: Encodable {
+    private static let currentSDKVersion = "4.5.0"
+
+    let token: String
+    let installationId: String
+    let osVersion: String
+    let sdkVersion: String
+
+    static func make(token: String) -> SubscribeUserRequest {
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        return SubscribeUserRequest(
+            token: token,
+            installationId: SharedData.shared.installationId,
+            osVersion: "\(version.majorVersion).\(version.minorVersion).\(version.patchVersion)",
+            sdkVersion: currentSDKVersion
+        )
     }
 }

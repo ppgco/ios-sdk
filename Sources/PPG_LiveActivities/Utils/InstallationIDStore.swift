@@ -1,14 +1,3 @@
-//
-//  InstallationIDStore.swift
-//  PPG_LiveActivities
-//
-//  Persistent UUIDv4 used as the `installationId` field when registering
-//  Live Notification subscribers. The id is generated lazily on first
-//  access and persisted in `UserDefaults.standard`. It is intentionally
-//  decoupled from `PPG.subscriberId` (push subscriber) — backend treats
-//  `installationId` as a per-device analytics handle, not a user identity.
-//
-
 import Foundation
 
 @available(iOS 17.2, *)
@@ -16,27 +5,43 @@ internal final class InstallationIDStore {
     
     static let shared = InstallationIDStore()
     
-    private static let storageKey = "PPGLiveActivities_InstallationID"
-    private let defaults: UserDefaults
+    private static let storageKey = "PPGInstallationId"
+    private static let legacyStorageKey = "PPGLiveActivities_InstallationID"
+    private var defaults: UserDefaults = .standard
     
-    private init(defaults: UserDefaults = .standard) {
-        self.defaults = defaults
+    private init() {}
+
+    func configure(appGroupId: String) {
+        guard !appGroupId.isEmpty,
+              let sharedDefaults = UserDefaults(suiteName: appGroupId) else {
+            defaults = .standard
+            return
+        }
+
+        defaults = sharedDefaults
     }
     
-    /// Returns the persistent installation id, generating one on first call.
     var installationId: String {
+        if let legacy = UserDefaults.standard.string(forKey: Self.legacyStorageKey),
+              !legacy.isEmpty {
+
+            if defaults.string(forKey: Self.storageKey) == nil {
+                defaults.set(legacy, forKey: Self.storageKey)
+            }
+
+            UserDefaults.standard.removeObject(forKey: Self.legacyStorageKey)
+        }
+
         if let existing = defaults.string(forKey: Self.storageKey),
            !existing.isEmpty {
             return existing
         }
+
         let fresh = UUID().uuidString
         defaults.set(fresh, forKey: Self.storageKey)
+
         LiveActivityLogger.shared.debug("Generated installationId: \(fresh)")
+
         return fresh
-    }
-    
-    /// Reset the persisted id. Intended for diagnostics and tests.
-    func reset() {
-        defaults.removeObject(forKey: Self.storageKey)
     }
 }

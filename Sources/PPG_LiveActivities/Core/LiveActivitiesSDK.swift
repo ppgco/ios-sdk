@@ -58,6 +58,7 @@ public class LiveActivitiesSDK {
         
         HotMessageStore.shared.configure(appGroupId: appGroupId)
         LiveActivityDesignStore.shared.configure(appGroupId: appGroupId)
+        InstallationIDStore.shared.configure(appGroupId: appGroupId)
         
         PushSDKBridge.updateLAPermissionLabel(ActivityAuthorizationInfo().areActivitiesEnabled)
         
