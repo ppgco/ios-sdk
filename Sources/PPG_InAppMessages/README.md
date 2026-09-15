@@ -1,28 +1,30 @@
-# PPG In-App Messages SDK for iOS
+# PushPushGo In-App Messages SDK for iOS
 
 Display personalized in-app messages to your iOS app users with rich content, smart targeting, and beautiful templates.
 
 ## Requirements
 
 - iOS 13.0+
-- Swift 5.0+
+- Swift 5.5+
 - Xcode 13.0+
 
 ## Installation
 
-### Swift Package Manager (Recommended)
+### Swift Package Manager (recommended)
 
-In Xcode:
-
-1. File → Add Package Dependencies...
-2. Enter: `https://github.com/ppgco/ios-sdk`
-3. Select `PPG_InAppMessages` product
+1. In Xcode, go to File → Add Package Dependencies…
+2. Enter `https://github.com/ppgco/ios-sdk`
+3. Select the `PPG_InAppMessages` product and add it to the app target.
 
 ### CocoaPods
 
 ```ruby
-pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.1.3'
+target 'YourApp' do
+  pod 'PPG_InAppMessages', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
+end
 ```
+
+Replace `YourApp` with the name of your app target.
 
 Then run:
 
@@ -213,7 +215,7 @@ Looking for more examples? Check out **[Examples.md](Examples.md)** for more com
 
 ## How It Works
 
-### 1. Configure Messages in PPG Dashboard
+### 1. Configure Messages in PushPushGo Dashboard
 
 Create and configure messages in your PushPushGo dashboard:
 
@@ -255,7 +257,7 @@ InAppMessagesSDK.shared.initialize(
 )
 ```
 
-**2. Check route matches backend config**
+**2. Check that the route matches the dashboard configuration**
 
 - Route name in code must exactly match dashboard configuration
 - Example: `onRouteChanged("home")` matches dashboard route "home"

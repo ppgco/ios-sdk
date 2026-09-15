@@ -1,37 +1,165 @@
-#  Setup Guide
+# PushPushGo Push Notifications SDK for iOS
 
-> [!IMPORTANT]
-> **Version 3.0.1+ integration**
->
-> The SDK now provides three simple ways to integrate push notifications:
-> 1. SwiftUI apps without AppDelegate - using `@UIApplicationDelegateAdaptor`
-> 2. UIKit apps with inheritance - extend `PPGAppDelegate`
-> 3. UIKit apps with existing AppDelegate - use helper methods
->
-> Key improvements:
-> - Simplified initialization with `PPG.initializeNotifications`
-> - Automatic notification delegate handling
-> - Built-in support for all notification callbacks
->
-> **SPM support**
-> 
-> Version 2.1.0 and above support SPM. Cocoapods is no longer supported from version 2.1.0.
->
-> **Requirements**
->
-> - Add AppGroups capability to your project
-> - Create Notification Service Extension (see section below)
+## Requirements
 
-### [ Create certificate and upload it ]
-Tutorial: https://docs.pushpushgo.company/application/providers/mobile-push/apns
+- iOS 13.0+
 
-### Install framework
-Choose one of options:
-- SPM (recommended)
-- Direct download
-- Cocoapods (deprecated from v2.1.0)
+## Installation
 
-### Integration
+Before you start, make sure to remove all previous integrations with other providers.
+
+### Swift Package Manager (recommended)
+
+1. In Xcode, go to File → Add Package Dependencies…
+2. Enter `https://github.com/ppgco/ios-sdk`
+3. Select the `PPG_framework` product and add it to the app target.
+
+### CocoaPods
+
+In your Podfile, add:
+
+```ruby
+target 'YourApp' do
+  pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
+end
+```
+
+Replace `YourApp` with the name of your app target.
+
+Then run:
+
+```bash
+pod install
+```
+
+### Migrating from CocoaPods to Swift Package Manager
+
+1. If the PushPushGo iOS SDK was the only library installed by Pods, run `pod deintegrate` to remove any Pods-related files. If you are using Pods for any other dependencies, remove `PPG_framework` references manually and detach it from the app and Notification Service Extension targets.
+2. In Xcode, go to File → Add Package Dependencies…, enter the GitHub URL above, and add `PPG_framework` to the app target.
+3. Add `PPG_framework` to the Notification Service Extension target.
+4. Clean and rebuild the project.
+5. If you encounter derived data problems, remove the project's derived data in Xcode, restart Xcode, then clean and rebuild the project.
+
+## Project setup
+
+### Create and upload an APNs certificate
+
+Upload the APNs certificate to your PushPushGo project by following the [APNs setup tutorial](https://docs.pushpushgo.company/application/providers/mobile-push/apns).
+
+### Add required capabilities
+
+1. Select the project in Xcode's Project navigator, then select the app under `TARGETS`.
+2. Open the `Signing & Capabilities` tab.
+3. Click `+ Capability` and add `Push Notifications`.
+4. Click `+ Capability` again, add `App Groups`, and select an existing group or create a new one.
+5. Make sure the provisioning profile includes these capabilities, then refresh it in Xcode.
+
+> **How to add new group to your provisioning profile?**
+>
+> In the Apple Developer portal, navigate to *Certificates, Identifiers & Profiles*. Open *Identifiers*, change *App IDs* to *App Groups*, and create the group.
+>
+> Return to *Identifiers*, choose the app identifier, enable the App Groups capability, and select the new group.
+
+### Create a Notification Service Extension
+
+1. In Xcode, go to `File → New → Target`.
+2. Select `Notification Service Extension` and click `Next`.
+3. Enter a product name, for example `PPGNotificationServiceExtension`, select Swift as the language, and click `Finish`.
+4. If Xcode asks whether to activate the new scheme, select `Activate`.
+5. Select the new extension target and open `Signing & Capabilities`.
+6. Click `+ Capability`, add `App Groups`, and select the exact same App Group used by the app target.
+7. Add `PPG_framework` to the extension target:
+   - **Swift Package Manager:** Under `General → Frameworks and Libraries`, click `+` and select `PPG_framework`.
+   - **CocoaPods:** Add the extension target to your Podfile as shown below.
+8. Open the generated `NotificationService.swift` file and replace its contents with the code below.
+9. Replace `YOUR_APP_GROUP_ID` with the App Group identifier selected for both the app and extension targets.
+
+```swift
+import UserNotifications
+import PPG_framework
+
+class NotificationService: UNNotificationServiceExtension {
+    private var contentHandler: ((UNNotificationContent) -> Void)?
+    private var bestAttemptContent: UNMutableNotificationContent?
+
+    override func didReceive(
+        _ request: UNNotificationRequest,
+        withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
+    ) {
+        guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else {
+            contentHandler(request.content)
+            return
+        }
+
+        self.contentHandler = contentHandler
+        self.bestAttemptContent = content
+
+        // Set the App Group identifier configured for the app and extension.
+        SharedData.shared.appGroupId = "YOUR_APP_GROUP_ID"
+
+        let group = DispatchGroup()
+
+        group.enter()
+        PPG.notificationDelivered(notificationRequest: request) { _ in
+            group.leave()
+        }
+
+        group.enter()
+        PPG.modifyNotification(content) {
+            group.leave()
+        }
+
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self,
+                  let contentHandler = self.contentHandler,
+                  let bestAttemptContent = self.bestAttemptContent else {
+                return
+            }
+
+            self.contentHandler = nil
+            contentHandler(bestAttemptContent)
+        }
+    }
+
+    override func serviceExtensionTimeWillExpire() {
+        guard let contentHandler = contentHandler,
+              let bestAttemptContent = bestAttemptContent else {
+            return
+        }
+
+        self.contentHandler = nil
+        contentHandler(bestAttemptContent)
+    }
+}
+```
+
+#### CocoaPods integration
+
+If you use CocoaPods, add the Notification Service Extension next to your application target in the Podfile. Replace `PPGNotificationServiceExtension` with the name you selected:
+
+```ruby
+target 'PPGNotificationServiceExtension' do
+  use_frameworks!
+  use_modular_headers!
+  pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
+end
+```
+
+If compiling the app with the Service Extension produces a problem with `UIApplication.shared`, add this at the end of the Podfile:
+
+```ruby
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    next unless target.name == 'PPG_framework'
+
+    target.build_configurations.each do |config|
+      config.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'No'
+    end
+  end
+end
+```
+
+## App integration
 
 > [!NOTE]
 > While the previous integration method (manually implementing all AppDelegate notification methods) will continue to work,
@@ -40,7 +168,7 @@ Choose one of options:
 
 The SDK supports three integration methods:
 
-#### 1. SwiftUI Apps (without AppDelegate)
+### 1. SwiftUI apps without an AppDelegate
 
 For SwiftUI apps that don't have a custom AppDelegate:
 
@@ -80,7 +208,7 @@ struct YourApp: App {
 }
 ```
 
-#### 2. UIKit Apps (Inheriting from PPGAppDelegate)
+### 2. UIKit apps inheriting from PPGAppDelegate
 
 For UIKit apps that want to inherit push notification handling:
 
@@ -91,7 +219,7 @@ import PPG_framework
 @main
 class AppDelegate: PPGAppDelegate {
     override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        // First call super to setup PPG delegate
+        // First call super to set up the PPG delegate
         let result = super.application(application, didFinishLaunchingWithOptions: launchOptions)
         
         // Initialize PPG
@@ -117,7 +245,7 @@ class AppDelegate: PPGAppDelegate {
 }
 ```
 
-#### 3. UIKit Apps (with Existing AppDelegate using helper functions)
+### 3. UIKit apps with an existing AppDelegate
 
 For UIKit apps that already have an AppDelegate:
 
@@ -135,7 +263,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
             appGroupId: "YOUR_APP_GROUP_ID"
         )
         
-        // Setup PPG notification delegate
+        // Set up the PPG notification delegate
         PPGUserNotificationCenterDelegateSetUp()
         
         // Register for notifications
@@ -151,114 +279,16 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         return true
     }
     
-    func applicationDidBecomeActive(_ application: UIApplication) {
-        PPGapplicationDidBecomeActive()
-    }
-    
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         PPGdidRegisterForRemoteNotificationsWithDeviceToken(deviceToken)
     }
 }
 ```
 
+## Usage
 
-### Migration from older versions
+### Create and send a beacon
 
-#### Cocoapods -> SPM
-1. If PPG ios-sdk was the only library installed by Pods, run `pod deintegrate` to remove any Pods-related files. If you are using Pods for any other dependencies, then remove PPG_framework references manually. Also detach it from project and NSE targets.
-2. Add library using SPM. Xcode -> File -> Add Package Dependency. Provide github url and choose your project target.
-3. Manually add library to NotificationServiceExtension target.
-4. Clean and rebuild the project.
-5. If you face any problems with derived data try running `rm -rf ~Library/Developer/Xcode/DerivedData/*` in your project directory. Then restart Xcode and clean and rebuild project.
-
-
-### Add required capabilities
-
-1. Click on top item in your project hierarchy.
-2. Select your project on target list.
-3. Select `Signing & Capabilities`.
-4. You can add capability by clicking on `+ Capability` button that is placed under `Signing & Capabilities` button.
-5. Add `Background Modes` capability unless it is already on your capability list. Then select `Remote notifications`.
-6. Add `Push notifications` capability unless it is already on your capability list.
-7. Add `App Groups`. You can use your default app group ID or add new one.
-8. Make sure that your `Provisioning Profile` has required capabilities. If you didn't add them while creating Provisioning Profile for your app you should go to your Apple Developer Center to add them. Then refresh your profile in Xcode project.
-
-> **How to add new group to your provisioning profile?**
->
-> Go to Apple developers and navigate to *Certificates, Identifiers & Profiles*. Then go to *Identifiers* and in the right corner change *App IDs* to *AppGroups*. You can add new group here.
->
-> Now you can go back to *Identifiers*, choose your app identifier and add *AppGroup* capability. Remember to check your new group.
-
-### Create Notification Service Extension
-
-1. Open your Xcode project
-2. Go to `File -> New -> Target`.
-3. Select `Notification Service Extension`.
-4. Choose a suitable name for it (for example `PPGNotificationServiceExtension`).
-5. Open `NotificationService.swift` file.
-6. Change `didReceive` function to: (use dispatch_group here to make sure that extension returns only when delivery event is sent and notification content is updated)
-7. Click on top item in your project hierarchy and select your NotificationExtension on target list
-8. Similarly to your project, add App Group capability to your NotificationExtension and check group you want to use.
-9. Also add PPG_framework to NotificationServiceExtension target (General tab) if you haven't done that yet.
-10. In your NotificationService extension, in *didReceive* function set your app group ID.
-
-```swift
-private var contentHandler: ((UNNotificationContent) -> Void)?
-private var bestAttemptContent: UNMutableNotificationContent?
-
-override func didReceive(
-    _ request: UNNotificationRequest,
-    withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void
-) {
-    guard let content = request.content.mutableCopy() as? UNMutableNotificationContent else {
-        contentHandler(request.content)
-        return
-    }
-
-    self.contentHandler = contentHandler
-    self.bestAttemptContent = content
-
-    // Dynamically set the App Group ID configured for the app and extension.
-    SharedData.shared.appGroupId = "YOUR APP GROUP ID"
-
-    let group = DispatchGroup()
-
-    group.enter()
-    PPG.notificationDelivered(notificationRequest: request) { _ in
-        group.leave()
-    }
-
-    group.enter()
-    PPG.modifyNotification(content) {
-        group.leave()
-    }
-
-    group.notify(queue: .main) { [weak self] in
-        guard let self = self,
-              let contentHandler = self.contentHandler,
-              let bestAttemptContent = self.bestAttemptContent else {
-            return
-        }
-
-        self.contentHandler = nil
-        contentHandler(bestAttemptContent)
-    }
-}
-
-override func serviceExtensionTimeWillExpire() {
-    guard let contentHandler = contentHandler,
-          let bestAttemptContent = bestAttemptContent else {
-        return
-    }
-
-    self.contentHandler = nil
-    contentHandler(bestAttemptContent)
-}
-```
-
-# Usage guide
-
-### Create and send Beacon
 ```swift
 let beacon = Beacon()
 beacon.addSelector("Test_Selector", "0")
@@ -300,10 +330,11 @@ beacon.send { result in }
 ```
 
 ### Unsubscribe user
+
 `PPG.unsubscribeUser { result in ... }`
 
+### Interactive notifications
 
-#### Interactive Notifications
 The SDK supports interactive notifications with action buttons. Actions are configured through the notification payload and automatically managed by the SDK:
 
 - Buttons are created dynamically based on the payload
@@ -312,15 +343,18 @@ The SDK supports interactive notifications with action buttons. Actions are conf
 - URLs can be associated with specific buttons
 
 Button identifiers:
+
 - `button_1`: First action button
 - `button_2`: Second action button
 
 Supported button options:
+
 - `foreground`: Opens the app
 - `destructive`: Red button style
 - `authenticationRequired`: Requires device unlock
 
 The SDK automatically manages:
+
 - Category creation and registration
 - Button title uniqueness
 - Action handling and URL redirection

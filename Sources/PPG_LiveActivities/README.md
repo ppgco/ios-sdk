@@ -1,13 +1,13 @@
-# PPG Live Activities SDK for iOS
+# PushPushGo Live Activities SDK for iOS
 
 Live match tracking on the Lock Screen and in the Dynamic Island, driven by
 the PushPushGo backend. Your app integrates the SDK once and subscribes a
 device to a campaign — starting the activity, updating the score, showing
-hot messages and ending the match are all done server-side through the PPG
-panel / REST API. The app does not need to be running.
+hot messages and ending the match are all done server-side through the PushPushGo 
+dashboard / REST API. The app does not need to be running.
 
 ```
-PPG panel / REST API ──▶ PPG backend ──▶ APNs ──▶ Live Activity on the device
+PushPushGo dashboard / REST API ──▶ PushPushGo backend ──▶ APNs ──▶ Live Activity on the device
                                 ▲
    your app ── subscribe(id) ───┘   (one-time, via this SDK)
 ```
@@ -15,22 +15,30 @@ PPG panel / REST API ──▶ PPG backend ──▶ APNs ──▶ Live Activit
 ## Requirements
 
 - iOS 17.2+
-- Swift 5.9+, Xcode 15.0+
-- An APNs certificate/key uploaded to your PPG project ([tutorial](https://docs.pushpushgo.company/application/providers/mobile-push/apns))
+- Swift 5.5+, Xcode 15.1+
+- An APNs certificate uploaded to your PushPushGo project ([APNs setup tutorial](https://docs.pushpushgo.company/application/providers/mobile-push/apns))
 
 ## Installation
 
 ### Swift Package Manager (recommended)
 
-1. Xcode → File → Add Package Dependencies…
-2. Enter: `https://github.com/ppgco/ios-sdk`
-3. Select the `PPG_LiveActivities` product — add it to **both** the app target and the Widget Extension target (created in Step 3 below).
+1. In Xcode, go to File → Add Package Dependencies…
+2. Enter `https://github.com/ppgco/ios-sdk`
+3. Select the `PPG_LiveActivities` product and add it to the app target. Step 4 explains how to add it to the Widget Extension.
 
 ### CocoaPods
 
 ```ruby
-pod 'PPG_LiveActivities', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.4.1'
+target 'YourApp' do
+  pod 'PPG_LiveActivities', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
+end
+
+target 'YourWidgetExtension' do
+  pod 'PPG_LiveActivities', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
+end
 ```
+
+Replace `YourApp` and `YourWidgetExtension` with the names of your app and Widget Extension targets.
 
 ## App setup (one-time)
 
@@ -39,7 +47,7 @@ pod 'PPG_LiveActivities', :git => 'https://github.com/ppgco/ios-sdk.git', :tag =
 The Widget Extension runs in a separate process — team badges, design and
 hot-message state are shared through an App Group container.
 
-1. Apple Developer portal → enable an App Group on **both** your app's bundle id and your widget extension's bundle id (e.g. `group.com.your.app.liveactivities`).
+1. Apple Developer portal → enable an App Group on **both** your app's bundle identifier and your Widget Extension's bundle identifier (e.g. `group.com.your.app.shared`). If you also use the Push Notifications SDK, use the same App Group identifier.
 2. Xcode → both targets → Signing & Capabilities → **+ Capability → App Groups** → tick the same group.
 3. Use that exact id everywhere below.
 
@@ -75,7 +83,7 @@ import PPG_LiveActivities
 LiveActivitiesSDK.shared.initialize(
     apiKey: "YOUR_API_KEY",
     projectId: "YOUR_PROJECT_ID",
-    appGroupId: "group.com.your.app.liveactivities",
+    appGroupId: "group.com.your.app.shared",
     isDebug: true            // verbose logs while integrating; remove for release
 )
 ```
@@ -97,7 +105,7 @@ struct MatchLiveActivityWidget: Widget {
         // The widget runs in its own process and does not inherit
         // configuration from the host app — wire up the shared App Group.
         LiveActivitiesSDK.configureWidgetExtension(
-            appGroupId: "group.com.your.app.liveactivities"
+            appGroupId: "group.com.your.app.shared"
         )
     }
 
@@ -137,11 +145,11 @@ Setup done — everything below is the runtime flow.
 
 | Phase | Who does it | How |
 |---|---|---|
-| 1. Create campaign | You (panel / your backend) | PPG panel or `POST /live-notifications/football-match-tracking` |
+| 1. Create campaign | You (dashboard / your backend) | PushPushGo dashboard or `POST /live-notifications/football-match-tracking` |
 | 2. Subscribe device | Your app (this SDK) | `subscribe(liveNotificationId:)` |
 | 3. Start | PPG backend | push-to-start at the scheduled time (or bootstrap, see 3b) |
-| 4. Score / hot messages | You (panel / your backend) | `PUT /live-data`, `POST /hot-messages` |
-| 5. End | You (panel / your backend) | `POST /stop` |
+| 4. Score / hot messages | You (dashboard / your backend) | `PUT /live-data`, `POST /hot-messages` |
+| 5. End | You (dashboard / your backend) | `POST /stop` |
 | 6. Unsubscribe (optional) | Your app | `unsubscribe(liveNotificationId:)` |
 
 All REST calls below use base `https://api.pushpushgo.com` and headers
@@ -149,7 +157,7 @@ All REST calls below use base `https://api.pushpushgo.com` and headers
 
 ### 1. Create the campaign
 
-Create the Live Activity in the PPG panel (teams, badges, colors, action
+Create the Live Activity in the PushPushGo dashboard (teams, badges, colors, action
 buttons, schedule) — or via REST:
 `POST /core/projects/{projectId}/live-notifications/football-match-tracking`.
 
@@ -391,7 +399,7 @@ LiveActivitiesSDK.shared.endActivity(
 
 ### Badges not showing?
 
-- The App Group id must be identical in `initialize(...)`,
+- The App Group identifier must be identical in `initialize(...)`,
   `configureWidgetExtension(...)` and both targets' capabilities.
 - In the subscriber flow badges download automatically right after the
   activity appears (placeholders swap to real badges within seconds); in the
