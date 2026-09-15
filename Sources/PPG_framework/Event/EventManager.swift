@@ -1,12 +1,3 @@
-//
-//  EventManager.swift
-//  PPG_framework
-//
-//  Created by PushPushGo on 17/10/2024.
-//  Copyright © 2024 Goodylabs. All rights reserved.
-//
-//
-
 import Foundation
 import UserNotifications
 

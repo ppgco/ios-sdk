@@ -175,6 +175,11 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         EventManager.shared.notificationDelivered(notificationRequest: notificationRequest, handler: handler)
     }
 
+    @available(
+        *,
+        deprecated,
+        message: "Delivery events are now registered from the Notification Service Extension. This method no longer needs to be called."
+    )
     public static func registerNotificationDeliveredFromUserInfo(
         userInfo: [AnyHashable: Any],
         handler: @escaping (_ result: ActionResult) -> Void
@@ -445,6 +450,11 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         ApiService.shared.sendBeacon(beacon: beacon, handler: handler)
     }
     
+    @available(
+        *,
+        deprecated,
+        message: "Event history is no longer retained. This method returns pending events only."
+    )
     public static func getEvents() -> [EventDTO] {
         return EventManager.shared.getEvents().map {$0.toDTO()}
     }
