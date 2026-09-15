@@ -1,5 +1,8 @@
 # PushPushGo Push Notifications SDK for iOS
 
+> [!NOTE]
+> **Version 4.5.0 is available.** It improves statistics reporting and notification processing. See the [changelog](CHANGELOG.md) for full details and migration notes.
+
 ## Requirements
 
 - iOS 13.0+
@@ -141,6 +144,7 @@ If you use CocoaPods, add the Notification Service Extension next to your applic
 target 'PPGNotificationServiceExtension' do
   use_frameworks!
   use_modular_headers!
+
   pod 'PPG_framework', :git => 'https://github.com/ppgco/ios-sdk.git', :tag => '4.5.0'
 end
 ```
@@ -158,6 +162,8 @@ post_install do |installer|
   end
 end
 ```
+
+After updating the Podfile, run `pod install`.
 
 ## App integration
 
@@ -359,3 +365,10 @@ The SDK automatically manages:
 - Button title uniqueness
 - Action handling and URL redirection
 - Event tracking for button clicks
+
+## Support
+
+For issues, feature requests, or questions:
+
+- GitHub Issues: https://github.com/ppgco/ios-sdk/issues
+- Documentation: https://docs.pushpushgo.com

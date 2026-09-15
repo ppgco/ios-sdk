@@ -40,6 +40,12 @@ end
 
 Replace `YourApp` and `YourWidgetExtension` with the names of your app and Widget Extension targets.
 
+Then run:
+
+```bash
+pod install
+```
+
 ## App setup (one-time)
 
 ### Step 1: App Group
@@ -95,6 +101,7 @@ LiveActivitiesSDK.shared.initialize(
 3. Replace the generated widget with:
 
 ```swift
+import ActivityKit
 import WidgetKit
 import SwiftUI
 import PPG_LiveActivities
