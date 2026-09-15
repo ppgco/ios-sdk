@@ -17,6 +17,15 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
     // Shared instance of PPG for handling notification delegate methods
     public static let shared = PPG()
+    private static let didBecomeActiveObserver: NSObjectProtocol = {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            PPG.sendEventsDataToApi()
+        }
+    }()
     
     public static var subscriberId: String {
         return SharedData.shared.subscriberId
@@ -36,6 +45,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         guard !apiToken.isEmpty else {
             fatalError("PPG SDK: apiToken cannot be empty")
         }
+
+        _ = didBecomeActiveObserver
         
         // Initialize bridge for In-App Messages communication
         _ = subscriptionBridge // Force initialization

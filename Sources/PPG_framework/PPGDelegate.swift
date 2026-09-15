@@ -1,4 +1,3 @@
-import SwiftUI
 import UIKit
 import UserNotifications
 
@@ -9,10 +8,9 @@ open class PPGAppDelegate: NSObject, UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = PPG.shared
         return true
     }
-    
-    open func applicationDidBecomeActive(_ application: UIApplication) {
-        PPG.sendEventsDataToApi()
-    }
+
+    @available(*, deprecated, message: "This method no longer needs to be overridden.")
+    open func applicationDidBecomeActive(_ application: UIApplication) {}
     
     open func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         PPG.sendDeviceToken(deviceToken) { result in
@@ -25,6 +23,7 @@ open class PPGAppDelegate: NSObject, UIApplicationDelegate {
         }
     }
 
+    @available(*, deprecated, message: "This method no longer needs to be overridden.")
     open func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         completionHandler(.noData)
     }
@@ -36,9 +35,8 @@ public extension UIApplicationDelegate {
         UNUserNotificationCenter.current().delegate = PPG.shared
     }
 
-    func PPGapplicationDidBecomeActive() {
-        PPG.sendEventsDataToApi()
-    }
+    @available(*, deprecated, message: "This method no longer needs to be called.")
+    func PPGapplicationDidBecomeActive() {}
     
     func PPGdidRegisterForRemoteNotificationsWithDeviceToken(_ deviceToken: Data) {
         PPG.sendDeviceToken(deviceToken) { result in
