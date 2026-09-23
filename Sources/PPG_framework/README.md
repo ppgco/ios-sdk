@@ -291,6 +291,67 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 }
 ```
 
+### Configure notification URL handling
+
+When a user taps a notification, regular web links open in their browser.
+Custom-scheme deep links open in the app registered for that URL scheme.
+
+> [!IMPORTANT]
+> URLs recognized as Universal Links based on the domain's AASA configuration
+> are forwarded directly to `application(_:continue:restorationHandler:)` on
+> the app's AppDelegate. This default behavior supports AppDelegate-based
+> navigation only. Apps using UIKit scenes, SwiftUI, or custom navigation
+> should provide a `NotificationClickHandler` and route the URL themselves. The
+> AppDelegate behavior is retained for backward compatibility.
+
+See [Deep links, Universal Links and AASA](../../DEEPLINKS.md) for a detailed
+description of URL handling and the Universal Link behavior.
+
+```swift
+import PPG_framework
+
+final class AppNotificationClickHandler: NotificationClickHandler {
+    func handle(url: URL) {
+        appRouter.handle(url)
+    }
+}
+
+PPG.notificationClickHandler = AppNotificationClickHandler()
+
+PPG.initializeNotifications(
+    projectId: "YOUR_PROJECT_ID",
+    apiToken: "YOUR_API_TOKEN",
+    appGroupId: "YOUR_APP_GROUP_ID"
+)
+```
+
+After configuring a custom handler, your app is responsible for handling every
+supported notification URL, including web URLs, deep links, and Universal
+Links. The SDK does not open URLs after passing them to your handler.
+
+The SDK validates the URL scheme before passing a URL to either the default or
+custom handler. The supported schemes default to `http`, `https`, and `app`.
+To handle a different scheme, add it to `PPGSupportedURLSchemes` in the main
+app's `Info.plist`:
+
+```xml
+<key>PPGSupportedURLSchemes</key>
+<array>
+    <string>http</string>
+    <string>https</string>
+    <string>myapp</string>
+</array>
+```
+
+Setting `PPGSupportedURLSchemes` replaces the default list, so include `http`
+and `https` unless your app should ignore web URLs.
+
+You can restore the default behavior at any time:
+
+```swift
+PPG.notificationClickHandler = nil
+```
+
 ## Usage
 
 ### Create and send a beacon

@@ -2,6 +2,10 @@
 
 ## 4.5.0
 
+### Added
+
+- Add `NotificationClickHandler` for custom notification URL handling.
+
 ### Changed
 
 - Improve statistics reporting reliability.
@@ -11,6 +15,7 @@
 ### Fixed
 
 - Fix notification categories handling and beacon date formatting.
+- Fix supported URL scheme checks.
 
 ### Deprecated
 

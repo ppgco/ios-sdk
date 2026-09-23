@@ -17,6 +17,10 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
 
     // Shared instance of PPG for handling notification delegate methods
     public static let shared = PPG()
+
+    /// Handles URLs from notification taps.
+    public static var notificationClickHandler: NotificationClickHandler?
+
     private static let didBecomeActiveObserver: NSObjectProtocol = {
         NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification,
@@ -46,8 +50,6 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
             fatalError("PPG SDK: apiToken cannot be empty")
         }
 
-        _ = didBecomeActiveObserver
-        
         // Initialize bridge for In-App Messages communication
         _ = subscriptionBridge // Force initialization
         SharedData.shared.appGroupId = appGroupId
@@ -65,6 +67,8 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         // Check if user is already subscribed (has device token saved)
         let hasDeviceToken = !SharedData.shared.deviceToken.isEmpty
         SharedData.shared.isSubscribed = hasDeviceToken
+
+        _ = didBecomeActiveObserver
     }
 
     public static func registerForNotifications(
@@ -236,8 +240,14 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
     }
 
     private static func isUrlWithSupportedScheme(_ urlString: String) -> Bool {
+        guard let scheme = URL(string: urlString)?.scheme else {
+            return false
+        }
+
         let schemes = getSupportedUrlSchemes()
-        return schemes.contains { scheme in urlString.starts(with: scheme) }
+        return schemes.contains {
+            $0.caseInsensitiveCompare(scheme) == .orderedSame
+        }
     }
     
     public static func getUrlFromNotificationResponse(
@@ -502,40 +512,41 @@ public class PPG: NSObject, UNUserNotificationCenterDelegate {
         }
 
         registerClick { _ in
-            // Handle URL opening if present
             let (responseUrl, isUniversalLink) = PPG.getUrlFromNotificationResponse(response: response)
 
-            if let url = responseUrl {
-                // Get UIApplication.shared safely using reflection
-                guard let sharedApplication = UIApplication.value(forKeyPath: "sharedApplication") as? UIApplication else {
-                    completionHandler()
-                    return
-                }
-                
-                if isUniversalLink {
-                    // Handle as Universal Link using NSUserActivity
-                    let userActivity = NSUserActivity(activityType: NSUserActivityTypeBrowsingWeb)
-                    userActivity.webpageURL = url
+            DispatchQueue.main.async {
+                if let url = responseUrl {
+                    if let notificationClickHandler = PPG.notificationClickHandler {
+                        notificationClickHandler.handle(url: url)
+                    } else if let sharedApplication = UIApplication.value(
+                        forKeyPath: "sharedApplication"
+                    ) as? UIApplication {
+                        if isUniversalLink {
+                            let userActivity = NSUserActivity(
+                                activityType: NSUserActivityTypeBrowsingWeb
+                            )
+                            userActivity.webpageURL = url
 
-                    DispatchQueue.main.async {
-                        // Pass to app delegate
-                        if let appDelegate = sharedApplication.delegate,
-                           appDelegate.responds(to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))) {
-                            _ = appDelegate.application?(sharedApplication, continue: userActivity, restorationHandler: { _ in })
+                            if let appDelegate = sharedApplication.delegate,
+                               appDelegate.responds(
+                                   to: #selector(UIApplicationDelegate.application(_:continue:restorationHandler:))
+                               ) {
+                                _ = appDelegate.application?(
+                                    sharedApplication,
+                                    continue: userActivity,
+                                    restorationHandler: { _ in }
+                                )
+                            } else {
+                                sharedApplication.open(url)
+                            }
                         } else {
-                            // Fallback if app delegate can't handle it
                             sharedApplication.open(url)
                         }
                     }
-                } else {
-                    // Open as regular URL in browser
-                    DispatchQueue.main.async {
-                        sharedApplication.open(url)
-                    }
                 }
+
+                completionHandler()
             }
-            completionHandler()
         }
     }
-
 }
